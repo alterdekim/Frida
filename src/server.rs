@@ -17,6 +17,11 @@ pub async fn server_mode() -> io::Result<()> {
     config.address("10.8.0.1");
     config.name("tun0");
 
+    #[cfg(target_os = "linux")]
+	config.platform(|config| {
+		config.packet_information(true);
+	});
+
     let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
     let sock = Arc::new(Mutex::new(UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await?));
