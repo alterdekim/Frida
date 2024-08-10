@@ -16,6 +16,7 @@ pub async fn server_mode() -> io::Result<()> {
     let mut config = tun::Configuration::default();
     config.address("10.8.0.1");
     config.name("tun0");
+    config.up();
 
     #[cfg(target_os = "linux")]
 	config.platform(|config| {
@@ -84,7 +85,7 @@ pub async fn server_mode() -> io::Result<()> {
             info!("{:?} bytes sent to tun", len);
         }
     });
-
+    
     let tun_device_clone_second = tun_device.clone();
     let mut buf = [0; 1024];
     let mut tun = tun_device_clone_second.lock().await;
