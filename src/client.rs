@@ -68,11 +68,10 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
 		config.packet_information(true);
 	});
 
+    let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
     #[cfg(target_os = "linux")]
     configure_routes();
-
-    let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
     let sock = Arc::new(Mutex::new(UdpSocket::bind("0.0.0.0:59611").await?));
     
