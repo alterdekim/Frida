@@ -19,7 +19,7 @@ pub async fn server_mode() -> io::Result<()> {
 
     let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
-    let sock = Arc::new(Mutex::new(UdpSocket::bind("127.0.0.1:8879".parse::<SocketAddr>().unwrap()).await?));
+    let sock = Arc::new(Mutex::new(UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await?));
 
     let clients = Arc::new(Mutex::new(HashMap::new()));
 
@@ -42,9 +42,7 @@ pub async fn server_mode() -> io::Result<()> {
     }*/
 
     let sock_main = sock.clone();
-    let remote_addr = "127.0.0.1:8879";
     let sock_main_instance = sock_main.lock().await;
-    sock_main_instance.connect(remote_addr).await?;
     let clients_main = clients.clone();
     let clients_main_instance = clients_main.lock().await;
 

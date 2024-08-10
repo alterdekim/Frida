@@ -41,6 +41,15 @@ async fn main() {
         .get_matches();
 
     let is_server_mode = matches.value_of("mode").unwrap() == "server";
-
-    if is_server_mode { server::server_mode().await; } else { client::client_mode().await; }
+    // "192.168.0.4:8879"
+    if is_server_mode {
+        server::server_mode().await; 
+    } else { 
+        if let Some(vpn_server_ip) = matches.value_of("vpn-server") {
+            let server_address = format!("{}:8879", vpn_server_ip);
+            client::client_mode(server_address.as_str()).await;
+        } else {
+            eprintln!("Error: For client mode, you shall provide the '--vpn-server' argument.");
+        }
+    }
 }

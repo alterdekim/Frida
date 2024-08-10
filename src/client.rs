@@ -8,7 +8,7 @@ use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
-pub async fn client_mode() -> io::Result<()> {
+pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     info!("Starting client...");
 
     let mut config = tun::Configuration::default();
@@ -22,7 +22,6 @@ pub async fn client_mode() -> io::Result<()> {
     let sock = Arc::new(Mutex::new(UdpSocket::bind("0.0.0.0:59611").await?));
     
     let sock_main = sock.clone();
-    let remote_addr = "127.0.0.1:8879";
     let sock_main_instance = sock_main.lock().await;
     sock_main_instance.connect(remote_addr).await?;
 
