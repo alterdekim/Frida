@@ -9,8 +9,9 @@ use serde_derive::Serialize;
 use serde_derive::Deserialize;
 //use packet::{builder::Builder, icmp, ip, Packet};
 use std::collections::HashMap;
+use futures::future;
 
-pub async fn server_mode() -> io::Result<()> {
+pub async fn server_mode() {
     info!("Starting server...");
     
     let mut config = tun::Configuration::default();
@@ -25,7 +26,10 @@ pub async fn server_mode() -> io::Result<()> {
 
     let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
-    let sock = Arc::new(Mutex::new(UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await?));
+    let sock = Arc::new(match UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await {
+        Ok(s) => s,
+        Err(_error) => panic!("Cannot bind to address")
+    });
 
     let clients = Arc::new(Mutex::new(HashMap::new()));
 
@@ -48,66 +52,79 @@ pub async fn server_mode() -> io::Result<()> {
     }*/
 
     let sock_main = sock.clone();
-    let sock_main_instance = sock_main.lock().await;
+    
     let clients_main = clients.clone();
-    let clients_main_instance = clients_main.lock().await;
+    
 
     let tun_device_clone = tun_device.clone();
     let sock_clone = sock.clone();
     let clients_clone = clients.clone();
-    tokio::spawn(async move {
-        let mut buf = [0; 1024];
-        let mut tun = tun_device_clone.lock().await;
-        let sock = sock_clone.lock().await;
-        let mut clients = clients_clone.lock().await;
-        loop {
-            let (len, addr) = match sock.recv_from(&mut buf).await {
-                Err(error) => {
-                    error!("Problem with reading from socket: {error:?}");
-                    (0, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
-                },
-                Ok(l) => l,
-            };
-
-            if len <= 0 { continue; }
-            
-            clients.insert("10.8.0.2", addr);
-            info!("{:?} bytes received from {:?}", len, addr);
-            
-            let len = match tun.write(&buf) {
-                Ok(l) => l,
-                Err(error) => {
-                    error!("Problem with writing to tun: {error:?}");
-                    0
-                }
-            };
-
-            info!("{:?} bytes sent to tun", len);
-        }
-    });
-    
     let tun_device_clone_second = tun_device.clone();
-    let mut buf = [0; 1024];
-    let mut tun = tun_device_clone_second.lock().await;
-    loop {
-        let len = match tun.read(&mut buf) {
-            Ok(l) => l,
-            Err(error) => {
-                error!("Problem with reading from tun: {error:?}");
-                0
-            },
-        };
-        
-        if len <= 0 { continue; }
 
-        info!("{:?} bytes received from tun", len);
-       
-        match clients_main_instance.get(&"10.8.0.2") {
-            Some(&addr) => {
-                let len = sock_main_instance.send_to(&buf, addr).await?;
-                info!("{:?} bytes sent to socket", len);
-            },
-            None => error!("There is no client..."),
-        }
-    }
+    let tasks = vec![
+        tokio::spawn(async move {
+            let mut buf = [0; 1024];
+            let sock_main_instance = sock_main;
+            loop {
+                let mut tun = tun_device_clone_second.lock().await;
+                let clients_main_instance = clients_main.lock().await;
+                let len = match tun.read(&mut buf) {
+                    Ok(l) => l,
+                    Err(error) => {
+                        error!("Problem with reading from tun: {error:?}");
+                        0
+                    },
+                };
+                
+                if len <= 0 { continue; }
+        
+                info!("{:?} bytes received from tun", len);
+            
+                match clients_main_instance.get(&"10.8.0.2") {
+                    Some(&addr) => {
+                        let len = match sock_main_instance.send_to(&buf, addr).await {
+                            Ok(l) => l,
+                            Err(error) => {error!("Problem with writing to tun: {error:?}");
+                            0},
+                        };
+                        info!("{:?} bytes sent to socket", len);
+                    },
+                    None => error!("There is no client..."),
+                }
+            }
+        }),
+        
+        tokio::spawn(async move {
+            let mut buf = [0; 1024];
+            let sock = sock_clone;
+            loop {
+                let mut tun = tun_device_clone.lock().await;
+                let mut clients = clients_clone.lock().await;
+                let (len, addr) = match sock.recv_from(&mut buf).await {
+                    Err(error) => {
+                        error!("Problem with reading from socket: {error:?}");
+                        (0, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
+                    },
+                    Ok(l) => l,
+                };
+
+                if len <= 0 { continue; }
+                
+                clients.insert("10.8.0.2", addr);
+                info!("{:?} bytes received from {:?}", len, addr);
+                
+                let len = match tun.write(&buf) {
+                    Ok(l) => l,
+                    Err(error) => {
+                        error!("Problem with writing to tun: {error:?}");
+                        0
+                    }
+                };
+
+                info!("{:?} bytes sent to tun", len);
+            }
+        })
+    ];
+
+    futures::future::join_all(tasks).await;
 }

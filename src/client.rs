@@ -8,6 +8,51 @@ use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
+fn configure_routes() {
+    let ip_output = Command::new("ip")
+        .arg("addr")
+        .arg("add")
+        .arg("10.8.0.2/24")
+        .arg("dev")
+        .arg("tun0")
+        .output()
+        .expect("Failed to execute IP command");
+
+    if !ip_output.status.success() {
+        eprintln!("Failed to set IP: {}", String::from_utf8_lossy(&ip_output.stderr));
+        return;
+    }
+
+    let link_output = Command::new("ip")
+        .arg("link")
+        .arg("set")
+        .arg("up")
+        .arg("dev")
+        .arg("tun0")
+        .output()
+        .expect("Failed to execute IP LINK command");
+
+    if !link_output.status.success() {
+        eprintln!("Failed to set link up: {}", String::from_utf8_lossy(&link_output.stderr));
+        return;
+    }
+
+    let route_output = Command::new("ip")
+        .arg("route")
+        .arg("add")
+        .arg("0.0.0.0/0")
+        .arg("via")
+        .arg("10.8.0.1")
+        .arg("dev")
+        .arg("tun0")
+        .output()
+        .expect("Failed to execute IP ROUTE command");
+
+    if !route_output.status.success() {
+        eprintln!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
+    }
+}
+
 pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     info!("Starting client...");
 
@@ -22,6 +67,10 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
 	config.platform(|config| {
 		config.packet_information(true);
 	});
+
+
+    #[cfg(target_os = "linux")]
+    configure_routes();
 
     let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
 
