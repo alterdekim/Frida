@@ -56,18 +56,18 @@ fn configure_routes() {
     }
 }
 
-pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
+pub async fn client_mode(remote_addr: String) -> io::Result<()> {
     info!("Starting client...");
 
     let mut config = tun2::Configuration::default();
     config.address("10.8.0.2");
     config.netmask("128.0.0.0");
     config.destination("0.0.0.0");
-    config.tun_name("tun0");
+    config.name("tun0");
     config.up();
 
     #[cfg(target_os = "linux")]
-	config.platform_config(|config| {
+	config.platform(|config| {
 		config.packet_information(true);
 	});
 
@@ -78,12 +78,13 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     configure_routes();
 
     let sock = UdpSocket::bind("0.0.0.0:59611").await?;
-    sock.connect(remote_addr).await?;
-    let r = Arc::new(sock);
-    let s = r.clone();
-    let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1_000);
+    sock.connect(&remote_addr).await?;
+    let receive_sock = Arc::new(sock);
+    let send_sock = Arc::new(UdpSocket::bind("0.0.0.0:59612").await?);
     
     let mut set = JoinSet::new();
+
+    let srem = Arc::new(remote_addr.clone());
 
     set.spawn(async move {
         let mut buf = [0; 4096];
@@ -92,7 +93,9 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
                 Ok(size) => {
                     let pkt = &buf[..size];
                     use std::io::{Error, ErrorKind::Other};
-                    tx.send(pkt.to_vec()).await.unwrap();
+                    //tx.send(pkt.to_vec()).await.unwrap();
+                    send_sock.send_to(pkt, srem.parse::<SocketAddr>()
+                    .expect("Unable to parse socket address"));
                     info!("Wrote to sock");
                 }
                 Err(error) => error!("Error with reading from tun")
@@ -102,16 +105,9 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     });
 
     set.spawn(async move {
-        while let Some(bytes) = rx.recv().await {
-            let len = s.send(&bytes).await.unwrap();
-            println!("{:?} bytes sent", len);
-        }
-    });
-
-    set.spawn(async move {
         let mut buf = [0; 1024];
         loop {
-            match r.recv_from(&mut buf).await {
+            match receive_sock.recv_from(&mut buf).await {
                 Ok((len, addr)) => {
                     println!("{:?} bytes received from {:?}", len, addr);
                     writer.write_all(&buf[..len]);

@@ -47,7 +47,7 @@ async fn main() {
     } else { 
         if let Some(vpn_server_ip) = matches.value_of("vpn-server") {
             let server_address = format!("{}:8879", vpn_server_ip);
-            client::client_mode(server_address.as_str()).await;
+            client::client_mode(server_address).await;
         } else {
             eprintln!("Error: For client mode, you shall provide the '--vpn-server' argument.");
         }
