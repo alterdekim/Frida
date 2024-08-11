@@ -1,12 +1,15 @@
-use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
-use std::{borrow::{Borrow, BorrowMut}, future::IntoFuture, io::{self, Read, Write}, net::SocketAddr, sync::Arc, thread, time};
 use std::process::Command;
 use clap::{App, Arg};
 use env_logger::Builder;
+use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
+use tokio::task::JoinSet;
+use std::io::{self, Read, Write};
+use std::sync::mpsc::Receiver;
+use tun2::BoxError;
 use log::{error, info, LevelFilter};
-use tun::platform::Device;
-use serde_derive::Serialize;
-use serde_derive::Deserialize;
+use std::sync::Arc;
+use std::net::SocketAddr;
+use std::collections::HashMap;
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -56,7 +59,7 @@ fn configure_routes() {
 pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     info!("Starting client...");
 
-    let mut config = tun::Configuration::default();
+    let mut config = tun2::Configuration::default();
     config.address("10.8.0.2");
     config.netmask("128.0.0.0");
     config.destination("0.0.0.0");
@@ -68,65 +71,57 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
 		config.packet_information(true);
 	});
 
-    let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
+    let dev = tun2::create(&config)?;
+    let (mut reader, mut writer) = dev.split();
 
     #[cfg(target_os = "linux")]
     configure_routes();
 
-    let sock = Arc::new(Mutex::new(UdpSocket::bind("0.0.0.0:59611").await?));
+    let sock = UdpSocket::bind("0.0.0.0:59611").await?;
+    let r = Arc::new(sock);
+    let s = r.clone();
+    let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1_000);
     
-    let sock_main = sock.clone();
-    let sock_main_instance = sock_main.lock().await;
-    sock_main_instance.connect(remote_addr).await?;
+    let mut set = JoinSet::new();
 
-    let tun_device_clone = tun_device.clone();
-    let sock_clone = sock.clone();
-    tokio::spawn(async move {
-        let mut buf = [0; 1024];
-        let mut tun = tun_device_clone.lock().await;
-        let sock = sock_clone.lock().await;
+    set.spawn(async move {
+        let mut buf = [0; 4096];
         loop {
-            let len = match sock.recv(&mut buf).await {
-                Err(error) => {
-                    error!("Problem with reading from socket: {error:?}");
-                    0
-                },
-                Ok(l) => l,
-            };
-
-            if len <= 0 { continue; }
-
-            info!("{:?} bytes received from socket", len);
-            
-            let len = match tun.write(&buf) {
-                Ok(l) => l,
-                Err(error) => {
-                    error!("Problem with writing to tun: {error:?}");
-                    0
+            match reader.read(&mut buf) {
+                Ok(size) => {
+                    let pkt = &buf[..size];
+                    use std::io::{Error, ErrorKind::Other};
+                    tx.send(pkt.to_vec()).await.unwrap();
+                    info!("Wrote to sock");
                 }
-            };
-
-            info!("{:?} bytes sent to tun", len);
+                Err(error) => error!("Error with reading from tun")
+            }
+            ()
         }
     });
 
-    let tun_device_clone_second = tun_device.clone();
-    let mut buf = [0; 1024];
-    let mut tun = tun_device_clone_second.lock().await;
-    loop {
-        let len = match tun.read(&mut buf) {
-            Ok(l) => l,
-            Err(error) => {
-                error!("Problem with reading from tun: {error:?}");
-                0
-            },
-        };
-        
-        if len <= 0 { continue; }
+    set.spawn(async move {
+        while let Some(bytes) = rx.recv().await {
+            let len = s.send(&bytes).await.unwrap();
+            println!("{:?} bytes sent", len);
+        }
+    });
 
-        info!("{:?} bytes received from tun", len);
-       
-        let len = sock_main_instance.send(&buf).await?;
-        info!("{:?} bytes sent to socket", len);
-    }
+    set.spawn(async move {
+        let mut buf = [0; 1024];
+        loop {
+            match r.recv_from(&mut buf).await {
+                Ok((len, addr)) => {
+                    println!("{:?} bytes received from {:?}", len, addr);
+                    writer.write_all(&buf[..len]);
+                    info!("Wrote to tun");
+                }
+                Err(error) => error!("Error with reading from sock")
+            };
+        }
+    });
+
+    while let Some(res) = set.join_next().await {}
+
+    Ok(())
 }
