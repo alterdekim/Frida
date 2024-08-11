@@ -42,7 +42,6 @@ pub async fn server_mode() -> Result<(), BoxError> {
             let size = reader.read(&mut buf)?;
             let pkt = &buf[..size];
             use std::io::{Error, ErrorKind::Other};
-            //tx.send(pkt.to_vec()).map_err(|e| Error::new(Other, e))?;
             let m = clients_getter.lock().await;
             match m.get(&"10.0.8.2") {
                 Some(&ref sock) => { sock.send(&pkt).await.unwrap(); info!("Wrote to sock") },
@@ -56,7 +55,7 @@ pub async fn server_mode() -> Result<(), BoxError> {
     });
 
     set.spawn(async move {
-        let mut buf = [0; 1024];
+        let mut buf = [0; 4096];
         loop {
             if let Ok((len, addr)) = receiver_sock.recv_from(&mut buf).await {
                 let mut m = clients_inserter.lock().await;

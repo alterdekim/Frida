@@ -105,7 +105,7 @@ pub async fn client_mode(remote_addr: String) -> io::Result<()> {
     });
 
     set.spawn(async move {
-        let mut buf = [0; 1024];
+        let mut buf = [0; 4096];
         loop {
             match receive_sock.recv_from(&mut buf).await {
                 Ok((len, addr)) => {
