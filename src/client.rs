@@ -78,6 +78,7 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     configure_routes();
 
     let sock = UdpSocket::bind("0.0.0.0:59611").await?;
+    sock.connect(remote_addr).await?;
     let r = Arc::new(sock);
     let s = r.clone();
     let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1_000);
