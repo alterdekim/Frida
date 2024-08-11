@@ -67,7 +67,7 @@ pub async fn client_mode(remote_addr: String) -> io::Result<()> {
     config.up();
 
     #[cfg(target_os = "linux")]
-	config.platform(|config| {
+	config.platform_config(|config| {
 		config.packet_information(true);
 	});
 
