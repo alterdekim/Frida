@@ -24,34 +24,85 @@ pub async fn server_mode() {
 		config.packet_information(true);
 	});
 
-    let tun_device = Arc::new(Mutex::new(tun::create(&config).unwrap()));
+    let tun_receiver = Arc::new(Mutex::new(tun::create(&config).unwrap()));
+    let tun_sender = tun_receiver.clone();
 
-    let sock = Arc::new(Mutex::new(match UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await {
+    let clients_inserter = Arc::new(Mutex::new(HashMap::new()));
+    let clients_getter = clients_inserter.clone();
+
+    let receiver_sock = Arc::new(match UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await {
         Ok(s) => s,
         Err(_error) => panic!("Cannot bind to address")
-    }));
+    });
+    let sender_sock = receiver_sock.clone();
 
-    let clients = Arc::new(Mutex::new(HashMap::new()));
-
-    /* let r = Arc::new(sock);
-    let s = r.clone();
     let (tx, mut rx) = mpsc::channel::<(Vec<u8>, SocketAddr)>(1_000);
+    let (mx, mut dx) = mpsc::channel::<(Vec<u8>, SocketAddr)>(1_000);
 
-    tokio::spawn(async move {
+    let mut set = JoinSet::new();
+
+    // tun 2 socket
+    set.spawn(async move {
         while let Some((bytes, addr)) = rx.recv().await {
-            let len = s.send_to(&bytes, &addr).await.unwrap();
-            info!("{:?} bytes sent", len);
+            let len = sender_sock.send_to(&bytes, &addr).await.unwrap();
+            info!("{:?} bytes sent to socket", len);
         }
     });
 
-    let mut buf = [0; 1024];
-    loop {
-        let (len, addr) = r.recv_from(&mut buf).await?;
-        info!("{:?} bytes received from {:?}", len, addr);
-        //tx.send((buf[..len].to_vec(), addr)).await.unwrap();
-    }*/
+    // socket 2 tun
+    set.spawn(async move {
+        while let Some((bytes, addr)) = dx.recv().await {
+            let mut m = clients_inserter.lock().await;
+            m.insert("10.0.8.2", addr);
+            let mut ltun = tun_sender.lock().await;
+            let len = match ltun.write(&bytes) {
+                Ok(l) => l,
+                Err(error) => {
+                    error!("Failed to write to tun!");
+                    0
+                }
+            };
+            info!("{:?} bytes sent to tun", len);
+        }
+    });
 
-    let sock_main = sock.clone();
+    // socket 2 tun
+    set.spawn(async move {
+        let mut buf = [0; 1024];
+        while let Ok((len, addr)) = receiver_sock.recv_from(&mut buf).await {
+            info!("{:?} bytes received from {:?}", len, addr);
+            mx.send((buf[..len].to_vec(), addr)).await.unwrap();
+        }
+    });
+
+
+    // tun 2 socket
+    set.spawn(async move {
+        let mut buf = [0; 1024];
+        let mut ltun: tokio::sync::MutexGuard<Device> = tun_receiver.lock().await;
+        loop {
+            let len = match ltun.read(&mut buf) {
+                Ok(l) => l,
+                Err(error) => {
+                    error!("Problem with reading from tun: {error:?}");
+                    0
+                }
+            };
+            info!("{:?} bytes received from tun", len);
+            let m = clients_getter.lock().await;
+            match m.get(&"10.0.8.2") {
+                Some(&addr) => tx.send((buf[..len].to_vec(), addr)).await.unwrap(),
+                None => error!("There's no client!")
+            }
+        }
+    });
+    
+
+
+
+
+
+   /* let sock_main = sock.clone();
     
     let clients_main = clients.clone();
     
@@ -120,7 +171,7 @@ pub async fn server_mode() {
 
             info!("{:?} bytes sent to tun", len);
         }
-    });
+    });*/
 
    /* let tasks = vec![
         tokio::spawn(),
