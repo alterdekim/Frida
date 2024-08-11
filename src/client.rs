@@ -63,11 +63,11 @@ pub async fn client_mode(remote_addr: &str) -> io::Result<()> {
     config.address("10.8.0.2");
     config.netmask("128.0.0.0");
     config.destination("0.0.0.0");
-    config.name("tun0");
+    config.tun_name("tun0");
     config.up();
 
     #[cfg(target_os = "linux")]
-	config.platform(|config| {
+	config.platform_config(|config| {
 		config.packet_information(true);
 	});
 

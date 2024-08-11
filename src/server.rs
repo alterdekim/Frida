@@ -15,11 +15,11 @@ pub async fn server_mode() -> Result<(), BoxError> {
     
     let mut config = tun2::Configuration::default();
     config.address("10.8.0.1");
-    config.name("tun0");
+    config.tun_name("tun0");
     config.up();
 
     #[cfg(target_os = "linux")]
-	config.platform(|config| {
+	config.platform_config(|config| {
 		config.packet_information(true);
 	});
 
