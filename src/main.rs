@@ -13,16 +13,19 @@ use serde_derive::Deserialize;
 mod tcp_client;
 mod tcp_server;
 
+const HEADER: [u8;3] = [0x56, 0x66, 0x76];
+const TAIL: [u8;3] = [0x76, 0x66, 0x56];
+
 #[derive(Serialize, Deserialize)]
 struct VpnPacket {
-    start: u8,
+    start: Vec<u8>,
     data: Vec<u8>,
-    end: u8
+    end: Vec<u8>
 }
 
 impl VpnPacket {
     fn init(d: Vec<u8>) -> Self {
-        VpnPacket{start: 0x56, data: d, end: 0x66}
+        VpnPacket{start: (&HEADER).to_vec(), data: d, end: (&TAIL).to_vec()}
     }
 }
 
