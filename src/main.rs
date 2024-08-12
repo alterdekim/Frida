@@ -12,6 +12,7 @@ use serde_derive::Deserialize;
 //mod server;
 mod tcp_client;
 mod tcp_server;
+mod util;
 
 #[derive(Serialize, Deserialize)]
 struct VpnPacket {

@@ -10,6 +10,8 @@ use std::net::SocketAddr;
 use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 
+use crate::VpnPacket;
+
 pub async fn server_mode() {
     info!("Starting server...");
     
@@ -54,7 +56,9 @@ pub async fn server_mode() {
         tokio::spawn(async move {
             loop {
                 if let Ok(bytes) = thread_mx.recv() {
-                    sock_writer.write(&bytes).await.unwrap();
+                    let vpn_packet = VpnPacket{ data: bytes };
+                    let serialized_data = bincode::serialize(&vpn_packet).unwrap();
+                    sock_writer.write_all(&serialized_data).await.unwrap();
                     info!("Wrote to sock");
                 }
             }
@@ -64,7 +68,8 @@ pub async fn server_mode() {
             let mut buf = vec![0; 2048];
             loop {
                 if let Ok(n) = sock_reader.read(&mut buf).await {
-                    thread_tx.send(buf[..n].to_vec()).unwrap();
+                    let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
+                    thread_tx.send(vpn_packet.data).unwrap();
                 }
             }
         });

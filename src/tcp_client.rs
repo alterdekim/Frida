@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use std::process::Command;
 use tokio::io::AsyncReadExt;
 
+use crate::VpnPacket;
+
 fn configure_routes() {
     let ip_output = Command::new("ip")
         .arg("addr")
@@ -101,14 +103,17 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 2048];
         loop {
             if let Ok(n) = sock_reader.read(&mut buf).await {
-                tx.send(buf[..n].to_vec()).unwrap();
+                let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
+                tx.send(vpn_packet.data).unwrap();
             }
         }
     });
 
     loop {
         if let Ok(bytes) = mx.recv() {
-            sock_writer.write(&bytes).await.unwrap();
+            let vpn_packet = VpnPacket{ data: bytes };
+            let serialized_data = bincode::serialize(&vpn_packet).unwrap();
+            sock_writer.write(&serialized_data).await.unwrap();
             info!("Wrote to sock");
         }
     }
