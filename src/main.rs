@@ -8,8 +8,10 @@ use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
-mod client;
-mod server;
+//mod client;
+//mod server;
+mod tcp_client;
+mod tcp_server;
 
 #[derive(Serialize, Deserialize)]
 struct VpnPacket {
@@ -43,11 +45,11 @@ async fn main() {
     let is_server_mode = matches.value_of("mode").unwrap() == "server";
     // "192.168.0.4:8879"
     if is_server_mode {
-        server::server_mode().await; 
+        tcp_server::server_mode().await; 
     } else { 
         if let Some(vpn_server_ip) = matches.value_of("vpn-server") {
             let server_address = format!("{}:8879", vpn_server_ip);
-            client::client_mode(server_address).await;
+            tcp_client::client_mode(server_address).await;
         } else {
             eprintln!("Error: For client mode, you shall provide the '--vpn-server' argument.");
         }
