@@ -92,19 +92,19 @@ pub async fn client_mode(remote_addr: String) {
     });
 
     tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
+        let mut buf = vec![0; 4096];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
         }
     });
 
     tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
+        let mut buf = vec![0; 4096];
         loop {
             if let Ok(n) = sock_reader.read(&mut buf).await {
                 //info!("Catch from socket: {:?}", &buf[..n]);
                 let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
-                if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+                //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
                 tx.send(vpn_packet.data).unwrap();
             }
         }

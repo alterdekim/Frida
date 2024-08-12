@@ -38,7 +38,7 @@ pub async fn server_mode() {
     });
 
     tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
+        let mut buf = vec![0; 4096];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
         }
@@ -64,12 +64,12 @@ pub async fn server_mode() {
         });
 
         tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
+            let mut buf = vec![0; 4096];
             loop {
                 if let Ok(n) = sock_reader.read(&mut buf).await {
                     info!("Catched from sock: {:?}", &buf[..n]);
                     let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
-                    if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+                    //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
                     thread_tx.send(vpn_packet.data).unwrap();
                 }
             }
