@@ -31,6 +31,7 @@ pub async fn server_mode() {
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
             dev_writer.write(&bytes).unwrap();
+            info!("Wrote to tun");
         }
     });
 
@@ -38,6 +39,7 @@ pub async fn server_mode() {
         let mut buf = vec![0; 2048];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
+            info!("Got from tun");
         }
     });
 
@@ -53,6 +55,7 @@ pub async fn server_mode() {
             loop {
                 if let Ok(bytes) = thread_mx.recv() {
                     sock_writer.write(&bytes).await.unwrap();
+                    info!("Wrote to sock");
                 }
             }
         });
@@ -60,50 +63,11 @@ pub async fn server_mode() {
         tokio::spawn(async move {
             let mut buf = vec![0; 2048];
             loop {
-                let n = sock_reader.try_read(&mut buf).unwrap();
-                thread_tx.send(buf[..n].to_vec()).unwrap();
+                if let Ok(n) = sock_reader.try_read(&mut buf) {
+                    thread_tx.send(buf[..n].to_vec()).unwrap();
+                    info!("Got from sock");
+                }
             }
         });
     }
-
-   /* let mut set = JoinSet::new();
-
-    set.spawn(async move {
-        let mut buf = [0; 4096];
-        loop {
-            let size = reader.read(&mut buf)?;
-            let pkt = &buf[..size];
-            use std::io::{Error, ErrorKind::Other};
-            let m = clients_getter.lock().await;
-            match m.get(&"10.0.8.2") {
-                Some(&ref sock) => { sock.send(&pkt).await.unwrap(); info!("Wrote to sock") },
-                None => { error!("There's no client!") }
-            };
-            drop(m);
-            ()
-        }
-        #[allow(unreachable_code)]
-        Ok::<(), std::io::Error>(())
-    });
-
-    set.spawn(async move {
-        let mut buf = [0; 4096];
-        loop {
-            if let Ok((len, addr)) = receiver_sock.recv_from(&mut buf).await {
-                let mut m = clients_inserter.lock().await;
-                if !m.contains_key(&"10.0.8.2") {
-                    let cl = UdpSocket::bind("0.0.0.0:59611").await?;
-                    cl.connect(addr).await?;
-                    m.insert("10.0.8.2", cl);
-                }
-                drop(m);
-                writer.write_all(&buf[..len])?;
-                info!("Wrote to tun");
-            }
-        }
-    });
-
-    while let Some(res) = set.join_next().await {}
-
-    Ok(())*/
 }

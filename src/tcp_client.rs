@@ -85,6 +85,7 @@ pub async fn client_mode(remote_addr: String) {
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
             dev_writer.write(&bytes).unwrap();
+            info!("Wrote to tun");
         }
     });
 
@@ -92,20 +93,24 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 2048];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
+            info!("Got from tun");
         }
     });
 
     tokio::spawn(async move {
         let mut buf = vec![0; 2048];
         loop {
-            let n = sock_reader.try_read(&mut buf).unwrap();
-            tx.send(buf[..n].to_vec()).unwrap();
+            if let Ok(n) = sock_reader.try_read(&mut buf) {
+                tx.send(buf[..n].to_vec()).unwrap();
+                info!("Got from sock");
+            }
         }
     });
 
     loop {
         if let Ok(bytes) = mx.recv() {
             sock_writer.write(&bytes).await.unwrap();
+            info!("Wrote to sock");
         }
     }
 }
