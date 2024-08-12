@@ -8,6 +8,7 @@ use log::{error, info, LevelFilter};
 use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
+use tokio::io::AsyncReadExt;
 
 pub async fn server_mode() {
     info!("Starting server...");
@@ -39,7 +40,6 @@ pub async fn server_mode() {
         let mut buf = vec![0; 2048];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
-            info!("Got from tun");
         }
     });
 
@@ -63,9 +63,8 @@ pub async fn server_mode() {
         tokio::spawn(async move {
             let mut buf = vec![0; 2048];
             loop {
-                if let Ok(n) = sock_reader.try_read(&mut buf) {
+                if let Ok(n) = sock_reader.read(&mut buf).await {
                     thread_tx.send(buf[..n].to_vec()).unwrap();
-                    info!("Got from sock");
                 }
             }
         });

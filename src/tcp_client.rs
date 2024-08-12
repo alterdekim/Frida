@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
 use std::process::Command;
+use tokio::io::AsyncReadExt;
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -93,16 +94,14 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 2048];
         while let Ok(n) = dev_reader.read(&mut buf) {
             dx.send(buf[..n].to_vec()).unwrap();
-            info!("Got from tun");
         }
     });
 
     tokio::spawn(async move {
         let mut buf = vec![0; 2048];
         loop {
-            if let Ok(n) = sock_reader.try_read(&mut buf) {
+            if let Ok(n) = sock_reader.read(&mut buf).await {
                 tx.send(buf[..n].to_vec()).unwrap();
-                info!("Got from sock");
             }
         }
     });
