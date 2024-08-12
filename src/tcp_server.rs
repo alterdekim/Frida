@@ -34,7 +34,6 @@ pub async fn server_mode() {
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
             dev_writer.write(&bytes).unwrap();
-            info!("Wrote to tun");
         }
     });
 
@@ -59,7 +58,7 @@ pub async fn server_mode() {
                     let vpn_packet = VpnPacket::init(bytes);
                     let serialized_data = bincode::serialize(&vpn_packet).unwrap();
                     sock_writer.write_all(&serialized_data).await.unwrap();
-                    info!("Wrote to sock");
+                    info!("Wrote to sock: {:?}", serialized_data);
                 }
             }
         });
@@ -68,6 +67,7 @@ pub async fn server_mode() {
             let mut buf = vec![0; 2048];
             loop {
                 if let Ok(n) = sock_reader.read(&mut buf).await {
+                    info!("Catched from sock: {:?}", &buf[..n]);
                     let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
                     thread_tx.send(vpn_packet.data).unwrap();
                 }
