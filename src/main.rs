@@ -52,12 +52,23 @@ async fn main() {
             .value_name("IP")
             .help("The IP address of the VPN server to connect to (client mode only)")
             .takes_value(true))
+        .arg(Arg::with_name("bind-to")
+            .long("bind-to")
+            .value_name("IP")
+            .help("The IP address of the VPN server to bind to (server mode only)")
+            .takes_value(true))
         .get_matches();
 
     let is_server_mode = matches.value_of("mode").unwrap() == "server";
     // "192.168.0.4:8879"
     if is_server_mode {
-        tcp_server::server_mode().await; 
+        if let Some(vpn_server_ip) = matches.value_of("bind-to") {
+            let server_address = format!("{}:8879", vpn_server_ip);
+            tcp_server::server_mode(server_address).await;
+        } else {
+            eprintln!("Error: For server mode, you shall provide the '--bind-to' argument.");
+        }
+         
     } else { 
         if let Some(vpn_server_ip) = matches.value_of("vpn-server") {
             let server_address = format!("{}:8879", vpn_server_ip);

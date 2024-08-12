@@ -103,9 +103,11 @@ pub async fn client_mode(remote_addr: String) {
         loop {
             if let Ok(n) = sock_reader.read(&mut buf).await {
                 //info!("Catch from socket: {:?}", &buf[..n]);
-                let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
+                match bincode::deserialize::<VpnPacket>(&buf[..n]) {
+                    Ok(vpn_packet) => tx.send(vpn_packet.data).unwrap(),
+                    Err(error) => error!("Deserialization error {:?}", error),
+                };
                 //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
-                tx.send(vpn_packet.data).unwrap();
             }
         }
     });

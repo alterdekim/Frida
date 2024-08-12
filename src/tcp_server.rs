@@ -12,7 +12,7 @@ use tokio::io::AsyncReadExt;
 
 use crate::{VpnPacket, HEADER, TAIL};
 
-pub async fn server_mode() {
+pub async fn server_mode(bind_addr: String) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
@@ -44,7 +44,7 @@ pub async fn server_mode() {
         }
     });
 
-    let listener = TcpListener::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await.unwrap();
+    let listener = TcpListener::bind(&bind_addr).await.unwrap();
 
     loop {
         let (mut socket, _) = listener.accept().await.unwrap();
@@ -58,7 +58,7 @@ pub async fn server_mode() {
                     let vpn_packet = VpnPacket::init(bytes);
                     let serialized_data = bincode::serialize(&vpn_packet).unwrap();
                     sock_writer.write_all(&serialized_data).await.unwrap();
-                    info!("Wrote to sock: {:?}", serialized_data);
+                    //info!("Wrote to sock: {:?}", serialized_data);
                 }
             }
         });
@@ -67,10 +67,12 @@ pub async fn server_mode() {
             let mut buf = vec![0; 4096];
             loop {
                 if let Ok(n) = sock_reader.read(&mut buf).await {
-                    info!("Catched from sock: {:?}", &buf[..n]);
-                    let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
+                    //info!("Catched from sock: {:?}", &buf[..n]);
+                    match bincode::deserialize::<VpnPacket>(&buf[..n]) {
+                        Ok(vpn_packet) => thread_tx.send(vpn_packet.data).unwrap(),
+                        Err(error) => error!("Deserializing error {:?}", error),
+                    };
                     //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
-                    thread_tx.send(vpn_packet.data).unwrap();
                 }
             }
         });
