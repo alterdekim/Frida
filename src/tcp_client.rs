@@ -102,7 +102,7 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 2048];
         loop {
             if let Ok(n) = sock_reader.read(&mut buf).await {
-                info!("Catch from socket: {:?}", &buf[..n]);
+                //info!("Catch from socket: {:?}", &buf[..n]);
                 let vpn_packet: VpnPacket = bincode::deserialize(&buf[..n]).unwrap();
                 tx.send(vpn_packet.data).unwrap();
             }
@@ -113,7 +113,7 @@ pub async fn client_mode(remote_addr: String) {
         if let Ok(bytes) = mx.recv() {
             let vpn_packet = VpnPacket::init(bytes);
             let serialized_data = bincode::serialize(&vpn_packet).unwrap();
-            info!("Writing to sock: {:?}", serialized_data);
+            //info!("Writing to sock: {:?}", serialized_data);
             sock_writer.write_all(&serialized_data).await.unwrap();
         }
     }
