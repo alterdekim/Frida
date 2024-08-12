@@ -12,11 +12,18 @@ use serde_derive::Deserialize;
 //mod server;
 mod tcp_client;
 mod tcp_server;
-mod util;
 
 #[derive(Serialize, Deserialize)]
 struct VpnPacket {
+    start: u8,
     data: Vec<u8>,
+    end: u8
+}
+
+impl VpnPacket {
+    fn init(d: Vec<u8>) -> Self {
+        VpnPacket{start: 0x56, data: d, end: 0x66}
+    }
 }
 
 #[tokio::main]
