@@ -1,7 +1,7 @@
 use crossbeam_channel::{unbounded, Receiver};
 use tokio::{io::AsyncWriteExt, net::{TcpListener, TcpSocket, TcpStream}, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
-use packet::{builder::Builder, icmp, ip, Packet};
+use packet::{builder::Builder, icmp, ip, AsPacket, Packet};
 use std::io::{Read, Write};
 use tun2::BoxError;
 use log::{error, info, LevelFilter};
@@ -17,6 +17,7 @@ pub async fn server_mode(bind_addr: String) {
     
     let mut config = tun2::Configuration::default();
     config.address("10.8.0.1");
+    config.netmask("255.255.255.0");
     config.tun_name("tun0");
     config.up();
 
@@ -32,7 +33,12 @@ pub async fn server_mode(bind_addr: String) {
     let (dx, mx) = unbounded::<Vec<u8>>();
 
     tokio::spawn(async move {
-        while let Ok(bytes) = rx.recv() {
+        while let Ok(mut bytes) = rx.recv() {
+            info!("Source ip: {:?}", &bytes[12..=15]);
+            //bytes[12] = 192;
+            //bytes[13] = 168;
+            //bytes[14] = 0;
+            //bytes[15] = 5;
             dev_writer.write_all(&bytes).unwrap();
         }
     });

@@ -12,6 +12,7 @@ use serde_derive::Deserialize;
 //mod server;
 mod tcp_client;
 mod tcp_server;
+mod eth_util;
 
 const HEADER: [u8;3] = [0x56, 0x66, 0x76];
 const TAIL: [u8;3] = [0x76, 0x66, 0x56];
