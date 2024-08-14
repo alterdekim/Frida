@@ -87,7 +87,8 @@ pub async fn server_mode(bind_addr: String) {
 
     tokio::spawn(async move {
         while let Ok(mut bytes) = rx.recv() {
-            info!("Source ip: {:?}", &bytes[12..=15]);
+            info!("Got packet");
+            //info!("Source ip: {:?}", &bytes[12..=15]);
             //bytes[12] = 192;
             //bytes[13] = 168;
             //bytes[14] = 0;

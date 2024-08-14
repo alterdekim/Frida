@@ -102,7 +102,7 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 4096];
         loop {
             if let Ok(n) = sock_reader.read(&mut buf).await {
-                //info!("Catch from socket: {:?}", &buf[..n]);
+                info!("Catch from socket");
                 match bincode::deserialize::<VpnPacket>(&buf[..n]) {
                     Ok(vpn_packet) => tx.send(vpn_packet.data).unwrap(),
                     Err(error) => error!("Deserialization error {:?}", error),
