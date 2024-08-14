@@ -116,7 +116,7 @@ pub async fn server_mode(bind_addr: String) {
             loop {
                 if let Ok(bytes) = thread_mx.recv() {
                     let vpn_packet = VpnPacket::init(bytes);
-                    let serialized_data = bincode::serialize(&vpn_packet).unwrap();
+                    let serialized_data = bincode::serialize::<VpnPacket>(&vpn_packet).unwrap();
                     sock_writer.write_all(&serialized_data).await.unwrap();
                     //info!("Wrote to sock: {:?}", serialized_data);
                 }
