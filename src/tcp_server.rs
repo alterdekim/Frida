@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
+use std::process::Command;
 
 use crate::{VpnPacket, HEADER, TAIL};
 
@@ -17,9 +18,60 @@ pub async fn server_mode(bind_addr: String) {
     
     let mut config = tun2::Configuration::default();
     config.address("10.8.0.1");
-    config.netmask("255.255.255.0");
     config.tun_name("tun0");
     config.up();
+
+   /*  let mut route_output = Command::new("route")
+        .arg("add")
+        .arg("0.0.0.0")
+        .arg("mask")
+        .arg("128.0.0.0")
+        .arg("0.0.0.0")
+        .output()
+        .expect("Failed to execute IP ROUTE 1");
+
+    if !route_output.status.success() {
+        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
+    }
+
+    route_output = Command::new("route")
+        .arg("add")
+        .arg("10.8.0.1")
+        .arg("mask")
+        .arg("255.255.255.255")
+        .arg("0.0.0.0")
+        .output()
+        .expect("Failed to execute IP ROUTE 2");
+
+    if !route_output.status.success() {
+        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
+    }
+
+    route_output = Command::new("route")
+        .arg("add")
+        .arg("127.255.255.255")
+        .arg("mask")
+        .arg("255.255.255.255")
+        .arg("0.0.0.0")
+        .output()
+        .expect("Failed to execute IP ROUTE 3");
+
+    if !route_output.status.success() {
+        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
+    }
+
+    route_output = Command::new("route")
+        .arg("add")
+        .arg("128.0.0.0")
+        .arg("mask")
+        .arg("128.0.0.0")
+        .arg("0.0.0.0")
+        .output()
+        .expect("Failed to execute IP ROUTE 4");
+
+    if !route_output.status.success() {
+        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
+    }*/
 
     #[cfg(target_os = "linux")]
 	config.platform_config(|config| {
@@ -62,7 +114,7 @@ pub async fn server_mode(bind_addr: String) {
             loop {
                 if let Ok(bytes) = thread_mx.recv() {
                     let vpn_packet = VpnPacket::init(bytes);
-                    let serialized_data = bincode::serialize(&vpn_packet).unwrap();
+                    let serialized_data = bincode::serialize::<VpnPacket>(&vpn_packet).unwrap();
                     sock_writer.write_all(&serialized_data).await.unwrap();
                     //info!("Wrote to sock: {:?}", serialized_data);
                 }
