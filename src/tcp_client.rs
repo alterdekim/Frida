@@ -114,7 +114,7 @@ pub async fn client_mode(remote_addr: String) {
 
     loop {
         if let Ok(bytes) = mx.recv() {
-            let vpn_packet = VpnPacket::init(bytes);
+            let vpn_packet = VpnPacket{ len: bytes.len() as u64, data: bytes };
             let serialized_data = bincode::serialize::<VpnPacket>(&vpn_packet).unwrap();
             //info!("Writing to sock: {:?}", serialized_data);
             sock_writer.write_all(&serialized_data).await.unwrap();

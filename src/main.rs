@@ -19,16 +19,10 @@ const TAIL: [u8;3] = [0x76, 0x66, 0x56];
 
 #[derive(Serialize, Deserialize)]
 struct VpnPacket {
-    //start: Vec<u8>,
-    data: Vec<u8>,
+    //start: Vec<u8>
+    len: u64,
+    data: Vec<u8>
     //end: Vec<u8>
-}
-
-impl VpnPacket {
-    fn init(d: Vec<u8>) -> Self {
-        //VpnPacket{start: (&HEADER).to_vec(), data: d, end: (&TAIL).to_vec()}
-        VpnPacket { data: d }
-    }
 }
 
 #[tokio::main]
