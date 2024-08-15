@@ -124,11 +124,11 @@ pub async fn server_mode(bind_addr: String) {
         });
 
         tokio::spawn(async move {
-            let mut buf = vec![0; 4096];
+            let mut buf = vec![0; 8192];
             loop {
                 if let Ok(l) = sock_reader.read_u64().await {
-                    buf = vec![0; l.try_into().unwrap()];
-                    if let Ok(n) = sock_reader.read(&mut buf).await {
+                    buf = vec![0; l as usize];
+                    if let Ok(n) = sock_reader.read_exact(&mut buf).await {
                         //info!("Catched from sock: {:?}", &buf[..n]);
                         match VpnPacket::deserialize((&buf[..n]).to_vec()) {
                             Ok(vpn_packet) => thread_tx.send(vpn_packet.data).unwrap(),
