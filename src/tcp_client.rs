@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use tokio::io::AsyncReadExt;
 
-use crate::{VpnPacket, HEADER, TAIL};
+use crate::VpnPacket;
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -101,21 +101,24 @@ pub async fn client_mode(remote_addr: String) {
     tokio::spawn(async move {
         let mut buf = vec![0; 4096];
         loop {
-            if let Ok(n) = sock_reader.read(&mut buf).await {
-                info!("Catch from socket");
-                match bincode::deserialize::<VpnPacket>(&buf[..n]) {
-                    Ok(vpn_packet) => tx.send(vpn_packet.data).unwrap(),
-                    Err(error) => error!("Deserialization error {:?}", error),
-                };
-                //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+            if let Ok(l) = sock_reader.read_u64().await {
+                buf = vec![0; l.try_into().unwrap()];
+                if let Ok(n) = sock_reader.read(&mut buf).await {
+                    info!("Catch from socket");
+                    match VpnPacket::deserialize((&buf[..n]).to_vec()) {
+                        Ok(vpn_packet) => tx.send(vpn_packet.data).unwrap(),
+                        Err(error) => error!("Deserialization error {:?}", error),
+                    };
+                    //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+                }
             }
         }
     });
 
     loop {
         if let Ok(bytes) = mx.recv() {
-            let vpn_packet = VpnPacket{ len: bytes.len() as u64, data: bytes };
-            let serialized_data = bincode::serialize::<VpnPacket>(&vpn_packet).unwrap();
+            let vpn_packet = VpnPacket{ data: bytes };
+            let serialized_data = vpn_packet.serialize();
             //info!("Writing to sock: {:?}", serialized_data);
             sock_writer.write_all(&serialized_data).await.unwrap();
         }

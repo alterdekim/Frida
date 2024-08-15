@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
 
-use crate::{VpnPacket, HEADER, TAIL};
+use crate::VpnPacket;
 
 pub async fn server_mode(bind_addr: String) {
     info!("Starting server...");
@@ -115,8 +115,8 @@ pub async fn server_mode(bind_addr: String) {
         tokio::spawn(async move {
             loop {
                 if let Ok(bytes) = thread_mx.recv() {
-                    let vpn_packet = VpnPacket{ len: bytes.len() as u64, data: bytes };
-                    let serialized_data = bincode::serialize::<VpnPacket>(&vpn_packet).unwrap();
+                    let vpn_packet = VpnPacket{ data: bytes };
+                    let serialized_data = vpn_packet.serialize();
                     sock_writer.write_all(&serialized_data).await.unwrap();
                     //info!("Wrote to sock: {:?}", serialized_data);
                 }
@@ -126,13 +126,16 @@ pub async fn server_mode(bind_addr: String) {
         tokio::spawn(async move {
             let mut buf = vec![0; 4096];
             loop {
-                if let Ok(n) = sock_reader.read(&mut buf).await {
-                    //info!("Catched from sock: {:?}", &buf[..n]);
-                    match bincode::deserialize::<VpnPacket>(&buf[..n]) {
-                        Ok(vpn_packet) => thread_tx.send(vpn_packet.data).unwrap(),
-                        Err(error) => error!("Deserializing error {:?}", error),
-                    };
-                    //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+                if let Ok(l) = sock_reader.read_u64().await {
+                    buf = vec![0; l.try_into().unwrap()];
+                    if let Ok(n) = sock_reader.read(&mut buf).await {
+                        //info!("Catched from sock: {:?}", &buf[..n]);
+                        match VpnPacket::deserialize((&buf[..n]).to_vec()) {
+                            Ok(vpn_packet) => thread_tx.send(vpn_packet.data).unwrap(),
+                            Err(error) => error!("Deserializing error {:?}", error),
+                        };
+                        //if vpn_packet.start != &HEADER || vpn_packet.end != &TAIL { error!("Bad packet"); continue; }
+                    }
                 }
             }
         });

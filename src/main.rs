@@ -1,5 +1,5 @@
 use tokio::{net::UdpSocket, sync::mpsc};
-use std::{io::{self, Read}, net::SocketAddr, sync::Arc, thread, time};
+use std::{io::{self, Error, Read}, net::SocketAddr, sync::Arc, thread, time};
 use std::process::Command;
 use clap::{App, Arg};
 use env_logger::Builder;
@@ -12,17 +12,26 @@ use serde_derive::Deserialize;
 //mod server;
 mod tcp_client;
 mod tcp_server;
-mod eth_util;
 
-const HEADER: [u8;3] = [0x56, 0x66, 0x76];
-const TAIL: [u8;3] = [0x76, 0x66, 0x56];
-
-#[derive(Serialize, Deserialize)]
 struct VpnPacket {
     //start: Vec<u8>
-    len: u64,
     data: Vec<u8>
     //end: Vec<u8>
+}
+
+impl VpnPacket {
+    fn serialize(&self) -> Vec<u8> {
+        let len: [u8; 8] = (self.data.len() as u64).to_be_bytes();
+        len.iter().cloned().chain(self.data.iter().cloned()).collect()
+    }
+
+    fn deserialize_length(d: [u8; 8]) -> u64 {
+        u64::from_be_bytes(d)
+    }
+
+    fn deserialize(d: Vec<u8>) -> Result<VpnPacket, Error> {
+        Ok(VpnPacket{ data: d })
+    }
 }
 
 #[tokio::main]
