@@ -90,7 +90,7 @@ pub async fn client_mode(remote_addr: String) {
 
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
-            //info!("Write to tun");
+            info!("Write to tun {:?}", hex::encode(&bytes));
             dev_writer.write_all(&bytes).unwrap();
         }
     });
@@ -106,7 +106,7 @@ pub async fn client_mode(remote_addr: String) {
         let mut buf = vec![0; 4096];
         loop {
             if let Ok(l) = sock_rec.recv(&mut buf).await {
-                tx.send((&buf[1..l]).to_vec());
+                tx.send((&buf[..l]).to_vec());
             }
         }
     });
@@ -118,7 +118,7 @@ pub async fn client_mode(remote_addr: String) {
         if let Ok(bytes) = mx.recv() {
             let vpn_packet = UDPVpnPacket{ data: bytes };
             let serialized_data = vpn_packet.serialize();
-            //info!("Writing to sock: {:?}", serialized_data);
+            info!("Writing to sock: {:?}", serialized_data);
             sock_snd.send(&serialized_data).await.unwrap();
         }
     }
