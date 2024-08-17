@@ -57,7 +57,7 @@ pub async fn server_mode(bind_addr: String) {
                     sock_snd.send_to(&buf[..n], peer.addr);
                 } else {
                     mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
-                    error!("UDPeer not found {:?}", ip);
+                    error!("UDPeer not found {:?}; what we have {:?}", ip, mp.keys().collect::<Vec<&IpAddr>>());
                 }
                 drop(mp);
             }
