@@ -54,7 +54,8 @@ pub async fn server_mode(bind_addr: String) {
                 let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
                 let mp = addrs_cl.lock().await;
                 if let Some(peer) = mp.get(&ip) {
-                    sock_snd.send_to(&buf[..n], peer.addr);
+                    info!("Sent to client");
+                    sock_snd.send_to(&buf[..n], peer.addr).await;
                 } else {
                     mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
                     error!("UDPeer not found {:?}; what we have {:?}", ip, mp.keys().collect::<Vec<&IpAddr>>());
@@ -76,6 +77,7 @@ pub async fn server_mode(bind_addr: String) {
                         0 => {
                             // (&buf[1..len]).to_vec()
                             let internal_ip = IpAddr::V4(Ipv4Addr::new(10,8,0,2));
+                            info!("Got handshake");
                             mp.insert(internal_ip, UDPeer { addr });
                         }, // handshake
                         1 => {
