@@ -22,58 +22,6 @@ pub async fn server_mode(bind_addr: String) {
     config.tun_name("tun0");
     config.up();
 
-   /*  let mut route_output = Command::new("route")
-        .arg("add")
-        .arg("0.0.0.0")
-        .arg("mask")
-        .arg("128.0.0.0")
-        .arg("0.0.0.0")
-        .output()
-        .expect("Failed to execute IP ROUTE 1");
-
-    if !route_output.status.success() {
-        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
-    }
-
-    route_output = Command::new("route")
-        .arg("add")
-        .arg("10.8.0.1")
-        .arg("mask")
-        .arg("255.255.255.255")
-        .arg("0.0.0.0")
-        .output()
-        .expect("Failed to execute IP ROUTE 2");
-
-    if !route_output.status.success() {
-        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
-    }
-
-    route_output = Command::new("route")
-        .arg("add")
-        .arg("127.255.255.255")
-        .arg("mask")
-        .arg("255.255.255.255")
-        .arg("0.0.0.0")
-        .output()
-        .expect("Failed to execute IP ROUTE 3");
-
-    if !route_output.status.success() {
-        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
-    }
-
-    route_output = Command::new("route")
-        .arg("add")
-        .arg("128.0.0.0")
-        .arg("mask")
-        .arg("128.0.0.0")
-        .arg("0.0.0.0")
-        .output()
-        .expect("Failed to execute IP ROUTE 4");
-
-    if !route_output.status.success() {
-        error!("Failed to set route: {}", String::from_utf8_lossy(&route_output.stderr));
-    }*/
-
     #[cfg(target_os = "linux")]
 	config.platform_config(|config| {
 		config.packet_information(true);

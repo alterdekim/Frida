@@ -1,15 +1,17 @@
-use std::process::Command;
-use clap::{App, Arg};
-use env_logger::Builder;
-use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
+use crossbeam_channel::{unbounded, Receiver};
+use tokio::{io::AsyncWriteExt, net::UdpSocket, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
-use std::io::{self, Read, Write};
-use std::sync::mpsc::Receiver;
+use packet::{builder::Builder, icmp, ip, Packet};
+use std::io::{Read, Write};
 use tun2::BoxError;
 use log::{error, info, LevelFilter};
 use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
+use std::process::Command;
+use tokio::io::AsyncReadExt;
+
+use crate::{UDPVpnPacket, VpnPacket};
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -56,7 +58,7 @@ fn configure_routes() {
     }
 }
 
-pub async fn client_mode(remote_addr: String) -> io::Result<()> {
+pub async fn client_mode(remote_addr: String) {
     info!("Starting client...");
 
     let mut config = tun2::Configuration::default();
@@ -71,54 +73,49 @@ pub async fn client_mode(remote_addr: String) -> io::Result<()> {
 		config.packet_information(true);
 	});
 
-    let dev = tun2::create(&config)?;
-    let (mut reader, mut writer) = dev.split();
+    let dev = tun2::create(&config).unwrap();
+    let (mut dev_reader, mut dev_writer) = dev.split();
 
     #[cfg(target_os = "linux")]
     configure_routes();
 
-    let sock = UdpSocket::bind("0.0.0.0:59611").await?;
-    sock.connect(&remote_addr).await?;
-    let receive_sock = Arc::new(sock);
-    let send_sock = Arc::new(UdpSocket::bind("0.0.0.0:59612").await?);
-    
-    let mut set = JoinSet::new();
+    let sock = UdpSocket::bind("0.0.0.0:59611").await.unwrap();
+    sock.connect(&remote_addr).await.unwrap();
 
-    let srem = Arc::new(remote_addr.clone());
+    let sock_rec = Arc::new(sock);
+    let sock_snd = sock_rec.clone();
 
-    set.spawn(async move {
-        let mut buf = [0; 4096];
+    let (tx, rx) = unbounded::<Vec<u8>>();
+    let (dx, mx) = unbounded::<Vec<u8>>();
+
+    tokio::spawn(async move {
+        while let Ok(bytes) = rx.recv() {
+            dev_writer.write_all(&bytes).unwrap();
+        }
+    });
+
+    tokio::spawn(async move {
+        let mut buf = vec![0; 8192];
+        while let Ok(n) = dev_reader.read(&mut buf) {
+            dx.send(buf[..n].to_vec()).unwrap();
+        }
+    });
+
+    tokio::spawn(async move {
+        let mut buf = vec![0; 4096];
         loop {
-            match reader.read(&mut buf) {
-                Ok(size) => {
-                    let pkt = &buf[..size];
-                    use std::io::{Error, ErrorKind::Other};
-                    //tx.send(pkt.to_vec()).await.unwrap();
-                    send_sock.send_to(pkt, srem.parse::<SocketAddr>()
-                    .expect("Unable to parse socket address"));
-                    info!("Wrote to sock");
-                }
-                Err(error) => error!("Error with reading from tun")
+            if let Ok(l) = sock_rec.recv(&mut buf).await {
+                tx.send((&buf[..l]).to_vec());
             }
-            ()
         }
     });
 
-    set.spawn(async move {
-        let mut buf = [0; 4096];
-        loop {
-            match receive_sock.recv_from(&mut buf).await {
-                Ok((len, addr)) => {
-                    println!("{:?} bytes received from {:?}", len, addr);
-                    writer.write_all(&buf[..len]);
-                    info!("Wrote to tun");
-                }
-                Err(error) => error!("Error with reading from sock")
-            };
+    loop {
+        if let Ok(bytes) = mx.recv() {
+            let vpn_packet = UDPVpnPacket{ data: bytes };
+            let serialized_data = vpn_packet.serialize();
+            //info!("Writing to sock: {:?}", serialized_data);
+            sock_snd.send(&serialized_data).await.unwrap();
         }
-    });
-
-    while let Some(res) = set.join_next().await {}
-
-    Ok(())
+    }
 }

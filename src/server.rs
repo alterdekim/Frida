@@ -1,20 +1,24 @@
-use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
+use crossbeam_channel::{unbounded, Receiver, Sender};
+use tokio::{io::AsyncWriteExt, net::{TcpListener, TcpSocket, TcpStream, UdpSocket}, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
-use packet::{builder::Builder, icmp, ip, Packet};
+use packet::{builder::Builder, icmp, ip, AsPacket, Packet};
 use std::io::{Read, Write};
-use std::sync::mpsc::Receiver;
 use tun2::BoxError;
 use log::{error, info, LevelFilter};
 use std::sync::Arc;
-use std::net::SocketAddr;
+use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
+use tokio::io::AsyncReadExt;
+use std::process::Command;
 
+use crate::VpnPacket;
 
-pub async fn server_mode() -> Result<(), BoxError> {
+pub async fn server_mode(bind_addr: String) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
     config.address("10.8.0.1");
+    config.netmask("255.255.255.0");
     config.tun_name("tun0");
     config.up();
 
@@ -23,55 +27,91 @@ pub async fn server_mode() -> Result<(), BoxError> {
 		config.packet_information(true);
 	});
 
-    let dev = tun2::create(&config)?;
-    let (mut reader, mut writer) = dev.split();
+    let dev = tun2::create(&config).unwrap();
+    let (mut dev_reader, mut dev_writer) = dev.split();
 
-    let clients_inserter = Arc::new(Mutex::new(HashMap::<&str, UdpSocket>::new()));
-    let clients_getter = clients_inserter.clone();
+    let sock = UdpSocket::bind(bind_addr).await.unwrap();
+    let sock_rec = Arc::new(sock);
+    let sock_snd = sock_rec.clone();
+    let addresses = Arc::new(Mutex::new(HashMap::<IpAddr, UDPeer>::new()));
 
-    let receiver_sock = Arc::new(match UdpSocket::bind("192.168.0.5:8879".parse::<SocketAddr>().unwrap()).await {
-        Ok(s) => s,
-        Err(_error) => panic!("Cannot bind to address")
-    });
+    let (send2tun, recv2tun) = unbounded::<Vec<u8>>();
 
-    let mut set = JoinSet::new();
-
-    set.spawn(async move {
-        let mut buf = [0; 4096];
+    tokio::spawn(async move {
         loop {
-            let size = reader.read(&mut buf)?;
-            let pkt = &buf[..size];
-            use std::io::{Error, ErrorKind::Other};
-            let m = clients_getter.lock().await;
-            match m.get(&"10.0.8.2") {
-                Some(&ref sock) => { sock.send(&pkt).await.unwrap(); info!("Wrote to sock") },
-                None => { error!("There's no client!") }
-            };
-            drop(m);
-            ()
-        }
-        #[allow(unreachable_code)]
-        Ok::<(), std::io::Error>(())
-    });
-
-    set.spawn(async move {
-        let mut buf = [0; 4096];
-        loop {
-            if let Ok((len, addr)) = receiver_sock.recv_from(&mut buf).await {
-                let mut m = clients_inserter.lock().await;
-                if !m.contains_key(&"10.0.8.2") {
-                    let cl = UdpSocket::bind("0.0.0.0:59611").await?;
-                    cl.connect(addr).await?;
-                    m.insert("10.0.8.2", cl);
-                }
-                drop(m);
-                writer.write_all(&buf[..len])?;
-                info!("Wrote to tun");
+            if let Ok(bytes) = recv2tun.recv() {
+                dev_writer.write_all(&bytes).unwrap();
             }
         }
     });
 
-    while let Some(res) = set.join_next().await {}
-
-    Ok(())
+    let addrs_cl = addresses.clone();
+    tokio::spawn(async move {
+        let mut buf = vec![0; 4096];
+        while let Ok(n) = dev_reader.read(&mut buf) {
+            // 16..=19
+            if n > 19 {
+                let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                let mp = addrs_cl.lock().await;
+                if let Some(peer) = mp.get(&ip) {
+                    sock_snd.send_to(&buf[..n], peer.addr);
+                } else {
+                    mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
+                    error!("UDPeer not found {:?}", ip);
+                }
+                drop(mp);
+            }
+        }
+    });
+    
+    let mut buf = vec![0; 2048];
+    let addrs_lp = addresses.clone();
+    
+    loop {
+        if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
+            let mut mp = addrs_lp.lock().await;
+            match buf.first() {
+                Some(h) => {
+                    match h {
+                        0 => {
+                            // (&buf[1..len]).to_vec()
+                            let internal_ip = IpAddr::V4(Ipv4Addr::new(10,8,0,2));
+                            mp.insert(internal_ip, UDPeer { addr });
+                        }, // handshake
+                        1 => {
+                            if mp.values().any(| p | p.addr == addr) {
+                                send2tun.send((&buf[1..len]).to_vec());
+                            }
+                        }, // payload
+                        _ => {
+                            error!("Unexpected header value.");
+                        }
+                    }
+                },
+                None => error!("There is no header")
+            }
+            drop(mp);
+        }
+    }
 }
+
+struct UDPeer {
+    addr: SocketAddr
+}
+
+/*struct WrappedUDP {
+    sock_rec: Arc<UdpSocket>,
+    sock_snd: Arc<UdpSocket>,
+    addresses: Arc<Mutex<HashMap<IpAddr, UDPeer>>>
+}
+
+impl WrappedUDP {
+    pub async fn new(addr: &str) -> Self {
+        
+        WrappedUDP { sock_rec, sock_snd, addresses }
+    }
+
+    pub async fn init(&self) {
+        
+    }
+}*/

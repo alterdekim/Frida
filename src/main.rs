@@ -8,10 +8,10 @@ use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
-//mod client;
-//mod server;
 mod tcp_client;
 mod tcp_server;
+mod server;
+mod client;
 
 struct VpnPacket {
     //start: Vec<u8>
@@ -31,6 +31,28 @@ impl VpnPacket {
 
     fn deserialize(d: Vec<u8>) -> Result<VpnPacket, Error> {
         Ok(VpnPacket{ data: d })
+    }
+}
+
+
+struct UDPVpnPacket {
+    //start: Vec<u8>
+    data: Vec<u8>
+    //end: Vec<u8>
+}
+
+impl UDPVpnPacket {
+    fn serialize(&self) -> Vec<u8> {
+        let h: &[u8] = &[1];
+        [h, &self.data[..]].concat()
+    }
+}
+
+struct UDPVpnHandshake {}
+
+impl UDPVpnHandshake {
+    fn serialize(&self) -> Vec<u8> {
+        [0, 9, 9, 9, 9, 9, 9].to_vec()
     }
 }
 
@@ -68,7 +90,7 @@ async fn main() {
     if is_server_mode {
         if let Some(vpn_server_ip) = matches.value_of("bind-to") {
             let server_address = format!("{}:8879", vpn_server_ip);
-            tcp_server::server_mode(server_address).await;
+            server::server_mode(server_address).await;
         } else {
             eprintln!("Error: For server mode, you shall provide the '--bind-to' argument.");
         }
