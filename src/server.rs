@@ -54,7 +54,7 @@ pub async fn server_mode(bind_addr: String) {
                 let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
                 let mp = addrs_cl.lock().await;
                 if let Some(peer) = mp.get(&ip) {
-                    info!("Sent to client");
+                    //info!("Sent to client");
                     sock_snd.send_to(&buf[..n], peer.addr).await;
                 } else {
                     mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
