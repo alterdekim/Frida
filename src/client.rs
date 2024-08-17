@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use tokio::io::AsyncReadExt;
 
-use crate::{UDPVpnHandshake, UDPVpnPacket, VpnPacket};
+use crate::{UDPVpnHandshake, UDPVpnPacket, VpnPacket, ClientConfiguration};
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -58,15 +58,15 @@ fn configure_routes() {
     }
 }
 
-pub async fn client_mode(remote_addr: String) {
+pub async fn client_mode(client_config: ClientConfiguration) {
     info!("Starting client...");
 
     let mut config = tun2::Configuration::default();
-    config.address("10.8.0.2");
-    config.netmask("128.0.0.0");
-    config.destination("0.0.0.0");
-    config.name("tun0");
-    config.up();
+    config.address(&client_config.client.address)
+        .netmask("128.0.0.0")
+        .destination("0.0.0.0")
+        .name("tun0")
+        .up();
 
     #[cfg(target_os = "linux")]
 	config.platform_config(|config| {
@@ -80,7 +80,7 @@ pub async fn client_mode(remote_addr: String) {
     configure_routes();
 
     let sock = UdpSocket::bind("0.0.0.0:59611").await.unwrap();
-    sock.connect(&remote_addr).await.unwrap();
+    sock.connect(&client_config.server.endpoint).await.unwrap();
 
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();

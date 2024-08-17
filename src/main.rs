@@ -1,22 +1,21 @@
 use tokio::{net::UdpSocket, sync::mpsc};
-use std::{io::{self, Error, Read}, net::SocketAddr, sync::Arc, thread, time};
+use std::{fs, io::{self, Error, Read}, net::{IpAddr, SocketAddr}, sync::Arc, thread, time, str};
 use std::process::Command;
 use clap::{App, Arg};
 use env_logger::Builder;
-use log::{error, info, LevelFilter};
+use log::{error, info, warn, LevelFilter};
 use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
+use std::str::FromStr;
 
-mod tcp_client;
-mod tcp_server;
+//mod tcp_client;
+//mod tcp_server;
 mod server;
 mod client;
 
 struct VpnPacket {
-    //start: Vec<u8>
     data: Vec<u8>
-    //end: Vec<u8>
 }
 
 impl VpnPacket {
@@ -34,11 +33,8 @@ impl VpnPacket {
     }
 }
 
-
 struct UDPVpnPacket {
-    //start: Vec<u8>
     data: Vec<u8>
-    //end: Vec<u8>
 }
 
 impl UDPVpnPacket {
@@ -56,6 +52,103 @@ impl UDPVpnHandshake {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+enum ServerMode {
+    VPN,
+    Hotspot
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ServerInterface {
+    bind_address: String,
+    internal_address: String,
+    private_key: String,
+    mode: ServerMode,
+    broadcast_mode: bool,
+    keepalive: u8
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ServerPeer {
+    public_key: String,
+    ip: IpAddr
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+enum ObfsProtocol {
+    DNSMask,
+    ICMPMask,
+    VEIL
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ObfsConfig {
+    protocol: ObfsProtocol
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct ServerConfiguration {
+    interface: ServerInterface,
+    peers: Vec<ServerPeer>,
+    obfs: ObfsConfig,
+    dns: DNSConfig
+}
+
+impl ServerConfiguration {
+    fn default() -> Self {
+        ServerConfiguration { interface: ServerInterface { 
+                bind_address: String::from_str("0.0.0.0:8879").unwrap(), 
+                internal_address: String::from_str("10.8.0.1").unwrap(), 
+                private_key: String::new(), 
+                mode: ServerMode::VPN, 
+                broadcast_mode: true, 
+                keepalive: 10 
+            }, 
+            peers: Vec::new(), 
+            obfs: ObfsConfig { protocol: ObfsProtocol::DNSMask }, 
+            dns: DNSConfig { enabled: false, net_name: String::from_str("fridah.vpn").unwrap(), entries: Vec::new() } 
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct DNSConfig {
+    enabled: bool,
+    net_name: String,
+    entries: Vec<DNSEntry>
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct DNSEntry {
+    ip: IpAddr,
+    subdomain: String
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ClientInterface {
+    private_key: String,
+    address: String
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct EndpointInterface {
+    public_key: String,
+    endpoint: String
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct ClientConfiguration {
+    client: ClientInterface,
+    server: EndpointInterface
+}
+
+impl ClientConfiguration {
+    fn default() -> Self {
+        ClientConfiguration { client: ClientInterface { private_key: String::new(), address: String::from_str("10.8.0.2").unwrap() }, 
+            server: EndpointInterface { public_key: String::new(), endpoint: String::from_str("192.168.0.2:8879").unwrap() } }
+    }
+}
+
 #[tokio::main]
 async fn main() {
 
@@ -65,7 +158,7 @@ async fn main() {
         .init();
 
     let matches = App::new("Frida VPN")
-        .version("1.0")
+        .version("0.1.2")
         .author("alterwain")
         .about("VPN software")
         .arg(Arg::with_name("mode")
@@ -73,34 +166,36 @@ async fn main() {
             .index(1)
             .possible_values(&["server", "client"])
             .help("Runs the program in either server or client mode"))
-        .arg(Arg::with_name("vpn-server")
-            .long("vpn-server")
-            .value_name("IP")
-            .help("The IP address of the VPN server to connect to (client mode only)")
-            .takes_value(true))
-        .arg(Arg::with_name("bind-to")
-            .long("bind-to")
-            .value_name("IP")
-            .help("The IP address of the VPN server to bind to (server mode only)")
+        .arg(Arg::with_name("config")
+            .long("config")
+            .required(true)
+            .value_name("FILE")
+            .help("The path to VPN configuration file")
             .takes_value(true))
         .get_matches();
 
     let is_server_mode = matches.value_of("mode").unwrap() == "server";
-    // "192.168.0.4:8879"
-    if is_server_mode {
-        if let Some(vpn_server_ip) = matches.value_of("bind-to") {
-            let server_address = format!("{}:8879", vpn_server_ip);
-            server::server_mode(server_address).await;
-        } else {
-            eprintln!("Error: For server mode, you shall provide the '--bind-to' argument.");
+
+    if let Some(config_path) = matches.value_of("config") {
+        
+        let data = fs::read(config_path);
+
+        if data.is_err() {
+            warn!("There is no config file. Generating it.");
+            if is_server_mode {
+                fs::write(config_path, serde_yaml::to_string(&ServerConfiguration::default()).unwrap());
+                return;
+            }
+            fs::write(config_path, serde_yaml::to_string(&ClientConfiguration::default()).unwrap());
+            return;
         }
-         
-    } else { 
-        if let Some(vpn_server_ip) = matches.value_of("vpn-server") {
-            let server_address = format!("{}:8879", vpn_server_ip);
-            client::client_mode(server_address).await;
-        } else {
-            eprintln!("Error: For client mode, you shall provide the '--vpn-server' argument.");
+
+        if is_server_mode {
+            let config: ServerConfiguration = serde_yaml::from_str(&String::from_utf8(data.unwrap()).unwrap()).unwrap();
+            server::server_mode(config).await;
+            return;
         }
+        let config: ClientConfiguration = serde_yaml::from_str(&String::from_utf8(data.unwrap()).unwrap()).unwrap();
+        client::client_mode(config).await;
     }
 }

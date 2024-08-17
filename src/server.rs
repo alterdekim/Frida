@@ -11,16 +11,16 @@ use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
 
-use crate::VpnPacket;
+use crate::{ VpnPacket, ServerConfiguration };
 
-pub async fn server_mode(bind_addr: String) {
+pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
-    config.address("10.8.0.1");
-    config.netmask("255.255.255.0");
-    config.tun_name("tun0");
-    config.up();
+    config.address(&server_config.interface.internal_address)
+        .netmask("255.255.255.0")
+        .tun_name("tun0")
+        .up();
 
     #[cfg(target_os = "linux")]
 	config.platform_config(|config| {
@@ -30,7 +30,7 @@ pub async fn server_mode(bind_addr: String) {
     let dev = tun2::create(&config).unwrap();
     let (mut dev_reader, mut dev_writer) = dev.split();
 
-    let sock = UdpSocket::bind(bind_addr).await.unwrap();
+    let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();
     let addresses = Arc::new(Mutex::new(HashMap::<IpAddr, UDPeer>::new()));
@@ -49,19 +49,17 @@ pub async fn server_mode(bind_addr: String) {
     tokio::spawn(async move {
         let mut buf = vec![0; 4096];
         while let Ok(n) = dev_reader.read(&mut buf) {
-            // 16..=19
-            if n > 19 {
-                let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
-                let mp = addrs_cl.lock().await;
-                if let Some(peer) = mp.get(&ip) {
-                    //info!("Sent to client");
-                    sock_snd.send_to(&buf[..n], peer.addr).await;
-                } else {
-                    mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
-                    error!("UDPeer not found {:?}; what we have {:?}", ip, mp.keys().collect::<Vec<&IpAddr>>());
-                }
-                drop(mp);
+            if n <= 19 { continue; }
+            
+            let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+            let mp = addrs_cl.lock().await;
+            if let Some(peer) = mp.get(&ip) {
+                sock_snd.send_to(&buf[..n], peer.addr).await;
+            } else {
+                // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
+                mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
             }
+            drop(mp);
         }
     });
     
@@ -85,9 +83,7 @@ pub async fn server_mode(bind_addr: String) {
                                 send2tun.send((&buf[1..len]).to_vec());
                             }
                         }, // payload
-                        _ => {
-                            error!("Unexpected header value.");
-                        }
+                        _ => error!("Unexpected header value.")
                     }
                 },
                 None => error!("There is no header")
