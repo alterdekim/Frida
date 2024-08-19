@@ -78,7 +78,7 @@ struct ServerInterface {
     keepalive: u8
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ServerPeer {
     public_key: String,
     ip: Ipv4Addr

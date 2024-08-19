@@ -68,6 +68,10 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let addrs_lp = addresses.clone();
     let peers_lp = peers.clone();
 
+    let mut f_plp = peers_lp.lock().await;
+    server_config.peers.iter().for_each(|c| f_plp.push(c.clone()));
+    drop(f_plp);
+
     loop {
         if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
             let mut mp = addrs_lp.lock().await;
