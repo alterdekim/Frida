@@ -2,6 +2,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use tokio::{io::AsyncWriteExt, net::{TcpListener, TcpSocket, TcpStream, UdpSocket}, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
 use packet::{builder::Builder, icmp, ip, AsPacket, Packet};
+use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 use std::io::{Read, Write};
 use tun2::BoxError;
 use log::{error, info, LevelFilter};
@@ -87,7 +88,18 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                             if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
                                 let internal_ip = IpAddr::V4(handshake.request_ip);
                                 info!("Accepted client");
-                                mp.insert(internal_ip, UDPeer { addr });
+                                let mut k = [0u8; 32];
+                                for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {
+                                    *p = x;
+                                }
+                                let static_secret = base64::decode(&server_config.interface.private_key).unwrap();
+                                let mut k1 = [0u8; 32];
+                                for (&x, p) in static_secret.iter().zip(k1.iter_mut()) {
+                                    *p = x;
+                                }
+                                let shared_secret = StaticSecret::from(k1)
+                                    .diffie_hellman(&PublicKey::from(k));
+                                mp.insert(internal_ip, UDPeer { addr, shared_secret });
                             } else {
                                 info!("Bad handshake");
                                 plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
@@ -110,5 +122,6 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 }
 
 struct UDPeer {
-    addr: SocketAddr
+    addr: SocketAddr,
+    shared_secret: SharedSecret
 }
