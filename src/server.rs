@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
 
-use crate::{ VpnPacket, ServerConfiguration };
+use crate::{ VpnPacket, ServerConfiguration, UDPSerializable };
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");

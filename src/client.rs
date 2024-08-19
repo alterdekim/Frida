@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use tokio::io::AsyncReadExt;
 
-use crate::{UDPVpnHandshake, UDPVpnPacket, VpnPacket, ClientConfiguration};
+use crate::{UDPVpnHandshake, UDPVpnPacket, VpnPacket, ClientConfiguration, UDPSerializable};
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
@@ -111,7 +111,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
         }
     });
 
-    let handshake = UDPVpnHandshake{};
+    let handshake = UDPVpnHandshake{ public_key: client_config.client.public_key.into_bytes() };
     sock_snd.send(&handshake.serialize()).await.unwrap();
 
     loop {
