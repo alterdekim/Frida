@@ -79,9 +79,14 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                             // (&buf[1..len]).to_vec()
                             let handshake = UDPVpnHandshake::deserialize(&buf);
                             info!("Got handshake! ip: {:?}; key: {:?}", handshake.request_ip, base64::encode(handshake.public_key));
-                            let internal_ip = IpAddr::V4(Ipv4Addr::new(10,8,0,2));
-                            info!("Got handshake");
-                            mp.insert(internal_ip, UDPeer { addr });
+                            let skey = base64::encode(handshake.public_key);
+                            if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
+                                let internal_ip = IpAddr::V4(handshake.request_ip);
+                                info!("Accepted client");
+                                mp.insert(internal_ip, UDPeer { addr });
+                            } else {
+                                info!("Bad handshake");
+                            }
                         }, // handshake
                         1 => {
                             if mp.values().any(| p | p.addr == addr) {
