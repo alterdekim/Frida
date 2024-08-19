@@ -10,7 +10,7 @@ use serde_derive::Deserialize;
 use std::str::FromStr;
 use x25519_dalek::{StaticSecret, PublicKey};
 use rand::{rngs::StdRng, SeedableRng};
-use base64;
+use base64::prelude::*;
 
 //mod tcp_client;
 //mod tcp_server;
@@ -31,7 +31,7 @@ impl VpnPacket {
         u64::from_be_bytes(d)
     }
 
-    fn deserialize(d: Vec<u8>) -> Result<VpnPacket, Error> {
+    fn deserialize(d: Vec<u8>) -> Result<Self, Error> {
         Ok(VpnPacket{ data: d })
     }
 }
@@ -48,13 +48,14 @@ impl UDPSerializable for UDPVpnPacket {
 }
 
 struct UDPVpnHandshake {
-    public_key: Vec<u8>
+    public_key: Vec<u8>,
+    request_ip: [u8; 4]
 }
 
 impl UDPSerializable for UDPVpnHandshake {
     fn serialize(&self) -> Vec<u8> {
         let h: &[u8] = &[0];
-        [h, &self.public_key[..]].concat()
+        [h, &self.public_key[..], &self.request_ip[..]].concat()
     }
 }
 
@@ -73,7 +74,7 @@ struct ServerInterface {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct ServerPeer {
+pub struct ServerPeer {
     public_key: String,
     ip: Ipv4Addr
 }
@@ -105,8 +106,8 @@ impl ServerConfiguration {
         ServerConfiguration { interface: ServerInterface { 
                 bind_address: String::from_str(bind_address).unwrap(), 
                 internal_address: String::from_str(internal_address).unwrap(), 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
+                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
+                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
                 broadcast_mode, 
                 keepalive 
             }, 
@@ -156,8 +157,8 @@ impl ClientConfiguration {
         let secret = StaticSecret::new(&mut csprng);
         ClientConfiguration { 
             client: ClientInterface { 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
+                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
+                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
                 address: String::from_str(internal_address).unwrap() 
             }, 
             server: EndpointInterface { 

@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 use tun2::BoxError;
 use log::{error, info, LevelFilter};
 use std::sync::Arc;
-use std::net::SocketAddr;
+use std::net::{ SocketAddr, Ipv4Addr };
 use std::collections::HashMap;
 use std::process::Command;
 use tokio::io::AsyncReadExt;
@@ -111,7 +111,9 @@ pub async fn client_mode(client_config: ClientConfiguration) {
         }
     });
 
-    let handshake = UDPVpnHandshake{ public_key: client_config.client.public_key.into_bytes() };
+    let pkey = base64::decode(client_config.client.public_key).unwrap();
+    info!("Handshake public_key: {:?}", pkey.len());
+    let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: client_config.client.address.parse::<Ipv4Addr>().unwrap().octets() };
     sock_snd.send(&handshake.serialize()).await.unwrap();
 
     loop {

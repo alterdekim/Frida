@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
 
-use crate::{ VpnPacket, ServerConfiguration, UDPSerializable };
+use crate::{ VpnPacket, ServerConfiguration, UDPSerializable, ServerPeer };
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
@@ -34,6 +34,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();
     let addresses = Arc::new(Mutex::new(HashMap::<IpAddr, UDPeer>::new()));
+    let peers = Arc::new(Mutex::new(Vec::<ServerPeer>::new()));
 
     let (send2tun, recv2tun) = unbounded::<Vec<u8>>();
 
@@ -65,10 +66,12 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     
     let mut buf = vec![0; 2048];
     let addrs_lp = addresses.clone();
-    
+    let peers_lp = peers.clone();
+
     loop {
         if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
             let mut mp = addrs_lp.lock().await;
+            let mut plp = peers_lp.lock().await;
             match buf.first() {
                 Some(h) => {
                     match h {
@@ -88,6 +91,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 },
                 None => error!("There is no header")
             }
+            drop(plp);
             drop(mp);
         }
     }
@@ -96,20 +100,3 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 struct UDPeer {
     addr: SocketAddr
 }
-
-/*struct WrappedUDP {
-    sock_rec: Arc<UdpSocket>,
-    sock_snd: Arc<UdpSocket>,
-    addresses: Arc<Mutex<HashMap<IpAddr, UDPeer>>>
-}
-
-impl WrappedUDP {
-    pub async fn new(addr: &str) -> Self {
-        
-        WrappedUDP { sock_rec, sock_snd, addresses }
-    }
-
-    pub async fn init(&self) {
-        
-    }
-}*/
