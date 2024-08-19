@@ -86,6 +86,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 mp.insert(internal_ip, UDPeer { addr });
                             } else {
                                 info!("Bad handshake");
+                                plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
                             }
                         }, // handshake
                         1 => {
