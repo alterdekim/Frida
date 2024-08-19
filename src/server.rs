@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
 
-use crate::{ VpnPacket, ServerConfiguration, UDPSerializable, ServerPeer };
+use crate::{ ServerConfiguration, ServerPeer, UDPSerializable, UDPVpnHandshake, VpnPacket };
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
@@ -77,6 +77,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                     match h {
                         0 => {
                             // (&buf[1..len]).to_vec()
+                            let handshake = UDPVpnHandshake::deserialize(&buf);
+                            info!("Got handshake! ip: {:?}; key: {:?}", handshake.request_ip, base64::encode(handshake.public_key));
                             let internal_ip = IpAddr::V4(Ipv4Addr::new(10,8,0,2));
                             info!("Got handshake");
                             mp.insert(internal_ip, UDPeer { addr });

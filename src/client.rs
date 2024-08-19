@@ -112,8 +112,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     });
 
     let pkey = base64::decode(client_config.client.public_key).unwrap();
-    info!("Handshake public_key: {:?}", pkey.len());
-    let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: client_config.client.address.parse::<Ipv4Addr>().unwrap().octets() };
+    let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: client_config.client.address.parse::<Ipv4Addr>().unwrap() };
     sock_snd.send(&handshake.serialize()).await.unwrap();
 
     loop {

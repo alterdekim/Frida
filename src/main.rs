@@ -10,7 +10,6 @@ use serde_derive::Deserialize;
 use std::str::FromStr;
 use x25519_dalek::{StaticSecret, PublicKey};
 use rand::{rngs::StdRng, SeedableRng};
-use base64::prelude::*;
 
 //mod tcp_client;
 //mod tcp_server;
@@ -49,13 +48,19 @@ impl UDPSerializable for UDPVpnPacket {
 
 struct UDPVpnHandshake {
     public_key: Vec<u8>,
-    request_ip: [u8; 4]
+    request_ip: Ipv4Addr // [u8; 4]
 }
 
 impl UDPSerializable for UDPVpnHandshake {
     fn serialize(&self) -> Vec<u8> {
         let h: &[u8] = &[0];
-        [h, &self.public_key[..], &self.request_ip[..]].concat()
+        [h, &self.public_key[..], &self.request_ip.octets()].concat()
+    }
+}
+
+impl UDPVpnHandshake {
+    fn deserialize(data: &Vec<u8>) -> Self {
+        UDPVpnHandshake { public_key: data[1..=32].to_vec(), request_ip: Ipv4Addr::new(data[33], data[34], data[35], data[36]) }
     }
 }
 
@@ -106,8 +111,8 @@ impl ServerConfiguration {
         ServerConfiguration { interface: ServerInterface { 
                 bind_address: String::from_str(bind_address).unwrap(), 
                 internal_address: String::from_str(internal_address).unwrap(), 
-                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
-                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
+                private_key: base64::encode(secret.as_bytes()), 
+                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
                 broadcast_mode, 
                 keepalive 
             }, 
@@ -157,8 +162,8 @@ impl ClientConfiguration {
         let secret = StaticSecret::new(&mut csprng);
         ClientConfiguration { 
             client: ClientInterface { 
-                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
-                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
+                private_key: base64::encode(secret.as_bytes()), 
+                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
                 address: String::from_str(internal_address).unwrap() 
             }, 
             server: EndpointInterface { 
