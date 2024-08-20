@@ -100,6 +100,10 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 let shared_secret = StaticSecret::from(k1)
                                     .diffie_hellman(&PublicKey::from(k));
                                 mp.insert(internal_ip, UDPeer { addr, shared_secret });
+                                
+                                let handshake_response = UDPVpnHandshake{ public_key: server_config.interface.public_key.clone().into_bytes(), request_ip: handshake.request_ip };
+
+                                sock_rec.send_to(&handshake_response.serialize(), addr);
                             } else {
                                 info!("Bad handshake");
                                 plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));

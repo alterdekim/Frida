@@ -4,7 +4,6 @@ use std::process::Command;
 use clap::{App, Arg, ArgMatches};
 use env_logger::Builder;
 use log::{error, info, warn, LevelFilter};
-use tun::platform::Device;
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 use std::str::FromStr;
@@ -36,13 +35,20 @@ impl VpnPacket {
 }
 
 struct UDPVpnPacket {
+    nonce: Vec<u8>, // [u8; 64]
     data: Vec<u8>
 }
 
 impl UDPSerializable for UDPVpnPacket {
     fn serialize(&self) -> Vec<u8> {
         let h: &[u8] = &[1];
-        [h, &self.data[..]].concat()
+        [h, &self.nonce, &self.data[..]].concat()
+    }
+}
+
+impl UDPVpnPacket {
+    fn deserialize(data: &Vec<u8>) -> Self {
+        UDPVpnPacket { nonce: data[1..=64].to_vec(), data: data[65..].to_vec() }
     }
 }
 
