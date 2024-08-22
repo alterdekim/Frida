@@ -1,7 +1,7 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use tokio::{io::AsyncWriteExt, net::{TcpListener, TcpSocket, TcpStream, UdpSocket}, sync::{mpsc, Mutex}};
+use tokio::{net::{TcpListener, TcpSocket, TcpStream, UdpSocket}, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
-use packet::{builder::Builder, icmp, ip, AsPacket, Packet};
+use packet::{builder::Builder, icmp, ip, AsPacket};
 use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 use std::io::{Read, Write};
 use tun2::BoxError;
@@ -9,7 +9,6 @@ use log::{error, info, LevelFilter};
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
-use tokio::io::AsyncReadExt;
 use std::process::Command;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Key, Nonce };
@@ -102,7 +101,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     loop {
         if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
             let mut mp = addrs_lp.lock().await;
-            let mut plp = peers_lp.lock().await;
+            let plp = peers_lp.lock().await;
             match buf.first() {
                 Some(h) => {
                     match h {

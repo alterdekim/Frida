@@ -40,7 +40,7 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
 
     let mut config: ServerConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad server config file structure");
 
-    let mut prs = &mut config.peers[..];
+    let prs = &mut config.peers[..];
     prs.sort_by(|a, b| a.ip.octets()[3].cmp(&b.ip.octets()[3]));
     
     let mut internal_address = prs.iter()

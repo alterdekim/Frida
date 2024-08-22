@@ -1,7 +1,7 @@
 use crossbeam_channel::{unbounded, Receiver};
-use tokio::{io::AsyncWriteExt, net::UdpSocket, sync::{mpsc, Mutex}};
+use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
 use tokio::task::JoinSet;
-use packet::{builder::Builder, icmp, ip, Packet};
+use packet::{builder::Builder, icmp, ip};
 use std::io::{Read, Write};
 use tun2::BoxError;
 use log::{error, info, warn, LevelFilter};
@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr };
 use std::collections::HashMap;
 use std::process::Command;
-use tokio::io::AsyncReadExt;
 use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -70,7 +69,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     config.address(&client_config.client.address)
         .netmask("128.0.0.0")
         .destination("0.0.0.0")
-        .name("tun0")
+        .tun_name("tun0")
         .up();
 
     #[cfg(target_os = "linux")]
@@ -165,7 +164,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     let s_cipher = cipher_shared.clone();
     loop {
         if let Ok(bytes) = mx.recv() {
-            let mut s_c = s_cipher.lock().await;
+            let s_c = s_cipher.lock().await;
             
             if s_c.is_some() {
                 let aes = Aes256Gcm::new(s_c.as_ref().unwrap().as_bytes().into());
