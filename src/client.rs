@@ -169,7 +169,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
             if s_c.is_some() {
                 let aes = Aes256Gcm::new(s_c.as_ref().unwrap().as_bytes().into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-
+                info!("Nonce len: {:?}", &nonce.len());
                 let ciphered_data = aes.encrypt(&nonce, &bytes[..]);
                 
                 if let Ok(ciphered_d) = ciphered_data {
