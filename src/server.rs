@@ -70,7 +70,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
             let mp = addrs_cl.lock().await;
             if let Some(peer) = mp.get(&ip) {
                 
-                let aes = Aes256Gcm::new(peer.shared_secret.as_bytes().into());
+                let aes = Aes256Gcm::new(&peer.shared_secret.into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
                 let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
@@ -123,7 +123,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 }
                                 let shared_secret = StaticSecret::from(k1)
                                     .diffie_hellman(&PublicKey::from(k));
-                                mp.insert(internal_ip, UDPeer { addr, shared_secret });
+                                mp.insert(internal_ip, UDPeer { addr, shared_secret: *shared_secret.as_bytes() });
                                 
                                 let handshake_response = UDPVpnHandshake{ public_key: server_config.interface.public_key.clone().into_bytes(), request_ip: handshake.request_ip };
 
@@ -136,7 +136,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                         1 => {
                             let packet = UDPVpnPacket::deserialize(&(buf[..len].to_vec()));
                             mp.values().filter(| p | p.addr == addr).for_each(|p| {
-                                let aes = Aes256Gcm::new(p.shared_secret.as_bytes().into());
+                                info!("UDPeer addr == addr / {:?}", &p.shared_secret);
+                                let aes = Aes256Gcm::new(&p.shared_secret.into());
                                 let nonce = Nonce::clone_from_slice(&packet.nonce);
                                 match aes.decrypt(&nonce, &packet.data[..]) {
                                     Ok(decrypted) => { send2tun.send(decrypted); },
@@ -157,5 +158,5 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
 struct UDPeer {
     addr: SocketAddr,
-    shared_secret: SharedSecret
+    shared_secret: [u8; 32]
 }
