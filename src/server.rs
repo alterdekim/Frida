@@ -36,15 +36,26 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();
+    let sock_hnd = sock_snd.clone();
     let addresses = Arc::new(Mutex::new(HashMap::<IpAddr, UDPeer>::new()));
     let peers = Arc::new(Mutex::new(Vec::<ServerPeer>::new()));
 
     let (send2tun, recv2tun) = unbounded::<Vec<u8>>();
 
+    let (send2hnd, recv2hnd) = unbounded::<(UDPVpnHandshake, SocketAddr)>();
+
     tokio::spawn(async move {
         loop {
             if let Ok(bytes) = recv2tun.recv() {
                 dev_writer.write_all(&bytes).unwrap();
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        loop {
+            if let Ok((handshake, addr)) = recv2hnd.recv() {
+                sock_hnd.send_to(&handshake.serialize(), addr).await;
             }
         }
     });
@@ -116,7 +127,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 
                                 let handshake_response = UDPVpnHandshake{ public_key: server_config.interface.public_key.clone().into_bytes(), request_ip: handshake.request_ip };
 
-                                sock_rec.send_to(&handshake_response.serialize(), addr);
+                                send2hnd.send((handshake_response, addr));
                             } else {
                                 info!("Bad handshake");
                                 plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
