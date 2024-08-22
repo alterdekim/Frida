@@ -72,8 +72,6 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 
                 let aes = Aes256Gcm::new(&peer.shared_secret.into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-                
-                info!("Key: {:?} / nonce: {:?}", &peer.shared_secret, &nonce);
 
                 let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
 
@@ -138,7 +136,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                         1 => {
                             let packet = UDPVpnPacket::deserialize(&(buf[..len].to_vec()));
                             mp.values().filter(| p | p.addr == addr).for_each(|p| {
-                                info!("UDPeer addr == addr / {:?}", &p.shared_secret);
+                                info!("Key {:?} / nonce {:?}", &p.shared_secret, &packet.nonce);
                                 let aes = Aes256Gcm::new(&p.shared_secret.into());
                                 let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                 match aes.decrypt(&nonce, &packet.data[..]) {
