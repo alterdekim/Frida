@@ -138,7 +138,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                             mp.values().filter(| p | p.addr == addr).for_each(|p| {
                                 info!("UDPeer addr == addr / {:?}", &p.shared_secret);
                                 let aes = Aes256Gcm::new(&p.shared_secret.into());
-                                let nonce = Nonce::clone_from_slice(&packet.nonce);
+                                let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                 match aes.decrypt(&nonce, &packet.data[..]) {
                                     Ok(decrypted) => { send2tun.send(decrypted); },
                                     Err(error) => error!("Decryption error! {:?}", error)
