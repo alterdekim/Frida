@@ -1,20 +1,16 @@
-use crossbeam_channel::{unbounded};
-use tokio::{net::{UdpSocket}, sync::{Mutex}};
-
-
+use crossbeam_channel::unbounded;
+use tokio::{net::UdpSocket, sync::Mutex};
 use x25519_dalek::{PublicKey, StaticSecret};
 use std::io::{Read, Write};
-
+use base64::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
-
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
 
 use crate::config::{ ServerConfiguration, ServerPeer};
-
 use crate::udp::{UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 
 pub async fn server_mode(server_config: ServerConfiguration) {
@@ -56,7 +52,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     tokio::spawn(async move {
         loop {
             if let Ok((handshake, addr)) = recv2hnd.recv() {
-                sock_hnd.send_to(&handshake.serialize(), addr).await;
+                let _ = sock_hnd.send_to(&handshake.serialize(), addr).await;
             }
         }
     });
@@ -78,7 +74,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
                 if let Ok(ciphered_d) = ciphered_data {
                     let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                    sock_snd.send_to(&vpn_packet.serialize(), peer.addr).await;
+                    let _ = sock_snd.send_to(&vpn_packet.serialize(), peer.addr).await;
                 } else {
                     error!("Traffic encryption failed.");
                 }
@@ -108,8 +104,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                         0 => {
                             // (&buf[1..len]).to_vec()
                             let handshake = UDPVpnHandshake::deserialize(&buf);
-                            info!("Got handshake! ip: {:?}; key: {:?}", handshake.request_ip, base64::encode(&handshake.public_key));
-                            let skey = base64::encode(&handshake.public_key);
+                            info!("Got handshake! ip: {:?}; key: {:?}", handshake.request_ip, BASE64_STANDARD.encode(&handshake.public_key));
+                            let skey = BASE64_STANDARD.encode(&handshake.public_key);
                             if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
                                 let internal_ip = IpAddr::V4(handshake.request_ip);
                                 info!("Accepted client");
@@ -117,7 +113,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {
                                     *p = x;
                                 }
-                                let static_secret = base64::decode(&server_config.interface.private_key).unwrap();
+                                let static_secret = BASE64_STANDARD.decode(&server_config.interface.private_key).unwrap();
                                 let mut k1 = [0u8; 32];
                                 for (&x, p) in static_secret.iter().zip(k1.iter_mut()) {
                                     *p = x;
@@ -126,9 +122,9 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                     .diffie_hellman(&PublicKey::from(k));
                                 mp.insert(internal_ip, UDPeer { addr, shared_secret: *shared_secret.as_bytes() });
                                 
-                                let handshake_response = UDPVpnHandshake{ public_key: base64::decode(&server_config.interface.public_key).unwrap(), request_ip: handshake.request_ip };
+                                let handshake_response = UDPVpnHandshake{ public_key: BASE64_STANDARD.decode(&server_config.interface.public_key).unwrap(), request_ip: handshake.request_ip };
 
-                                send2hnd.send((handshake_response, addr));
+                                let _ = send2hnd.send((handshake_response, addr));
                             } else {
                                 info!("Bad handshake");
                                 plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
@@ -141,7 +137,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 let aes = Aes256Gcm::new(&p.shared_secret.into());
                                 let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                 match aes.decrypt(&nonce, &packet.data[..]) {
-                                    Ok(decrypted) => { send2tun.send(decrypted); },
+                                    Ok(decrypted) => { let _ = send2tun.send(decrypted); },
                                     Err(error) => error!("Decryption error! {:?}", error)
                                 }
                             });

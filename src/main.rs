@@ -29,7 +29,7 @@ fn generate_server_config(matches: &ArgMatches, config_path: &str) {
         _ => ObfsProtocol::XOR
     };
 
-    fs::write(config_path, serde_yaml::to_string(&ServerConfiguration::default(bind_address, internal_address, broadcast_mode, keepalive, obfs_type)).unwrap());
+    let _ = fs::write(config_path, serde_yaml::to_string(&ServerConfiguration::default(bind_address, internal_address, broadcast_mode, keepalive, obfs_type)).unwrap());
 }
 
 fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &String) {
@@ -60,9 +60,9 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
 
     config.peers.push(ServerPeer { public_key: cl_cfg.client.public_key.clone(), ip: internal_address.clone() });
 
-    fs::write(peer_cfg, serde_yaml::to_string(cl_cfg).unwrap());
+    let _ = fs::write(peer_cfg, serde_yaml::to_string(cl_cfg).unwrap());
 
-    fs::write(config_path, serde_yaml::to_string(&config).unwrap());
+    let _ = fs::write(config_path, serde_yaml::to_string(&config).unwrap());
 }
 
 async fn init_server(cfg_raw: &str ) {

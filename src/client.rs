@@ -1,13 +1,10 @@
-use crossbeam_channel::{unbounded};
-use tokio::{net::UdpSocket, sync::{Mutex}};
-
-
+use crossbeam_channel::unbounded;
+use tokio::{net::UdpSocket, sync::Mutex};
 use std::io::{Read, Write};
-
+use base64::prelude::*;
 use log::{error, info, warn};
 use std::sync::Arc;
-use std::net::{ Ipv4Addr };
-
+use std::net::Ipv4Addr;
 use std::process::Command;
 use x25519_dalek::{PublicKey, StaticSecret};
 use aes_gcm::{
@@ -108,7 +105,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
         }
     });
 
-    let priv_key = base64::decode(client_config.client.private_key).unwrap();
+    let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     
     let cipher_shared_clone = cipher_shared.clone();
     tokio::spawn(async move {
@@ -140,7 +137,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                                     let aes = Aes256Gcm::new(s_cipher.as_ref().unwrap().as_bytes().into());
                                     let nonce = Nonce::clone_from_slice(&wrapped_packet.nonce);
                                     match aes.decrypt(&nonce, &wrapped_packet.data[..]) {
-                                        Ok(decrypted) => { tx.send(decrypted); },
+                                        Ok(decrypted) => { let _ = tx.send(decrypted); },
                                         Err(error) => error!("Decryption error! {:?}", error)
                                     }
                                 } else {
@@ -157,7 +154,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
         }
     });
 
-    let pkey = base64::decode(client_config.client.public_key).unwrap();
+    let pkey = BASE64_STANDARD.decode(client_config.client.public_key).unwrap();
     let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: client_config.client.address.parse::<Ipv4Addr>().unwrap() };
     sock_snd.send(&handshake.serialize()).await.unwrap();
 

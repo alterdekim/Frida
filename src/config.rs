@@ -4,6 +4,7 @@ use serde_derive::Deserialize;
 use std::str::FromStr;
 use x25519_dalek::{StaticSecret, PublicKey};
 use rand::{rngs::StdRng, SeedableRng};
+use base64::prelude::*;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct ServerInterface {
@@ -44,12 +45,12 @@ pub struct ServerConfiguration {
 impl ServerConfiguration {
     pub fn default(bind_address: &str, internal_address: &str, broadcast_mode: bool, keepalive: u8, obfs_type: ObfsProtocol) -> Self {
         let mut csprng = StdRng::from_entropy();
-        let secret = StaticSecret::new(&mut csprng);
+        let secret = StaticSecret::random_from_rng(&mut csprng);
         ServerConfiguration { interface: ServerInterface { 
                 bind_address: String::from_str(bind_address).unwrap(), 
                 internal_address: String::from_str(internal_address).unwrap(), 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
+                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
+                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
                 broadcast_mode, 
                 keepalive 
             }, 
@@ -96,11 +97,11 @@ pub struct ClientConfiguration {
 impl ClientConfiguration {
     pub fn default(endpoint: &str, keepalive: u8, public_key: &str, internal_address: &str) -> Self {
         let mut csprng = StdRng::from_entropy();
-        let secret = StaticSecret::new(&mut csprng);
+        let secret = StaticSecret::random_from_rng(&mut csprng);
         ClientConfiguration { 
             client: ClientInterface { 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
+                private_key: BASE64_STANDARD.encode(secret.as_bytes()), 
+                public_key: BASE64_STANDARD.encode(PublicKey::from(&secret).as_bytes()),
                 address: String::from_str(internal_address).unwrap() 
             }, 
             server: EndpointInterface { 
