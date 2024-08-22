@@ -139,6 +139,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                                 if s_cipher.is_some() {
                                     let aes = Aes256Gcm::new(s_cipher.as_ref().unwrap().as_bytes().into());
                                     let nonce = Nonce::clone_from_slice(&wrapped_packet.nonce);
+                                    info!("Key: {:?} / nonce: {:?}", s_cipher.as_ref().unwrap().as_bytes(), &nonce);
                                     match aes.decrypt(&nonce, &wrapped_packet.data[..]) {
                                         Ok(decrypted) => { tx.send(decrypted); },
                                         Err(error) => error!("Decryption error! {:?}", error)
