@@ -22,11 +22,6 @@ pub async fn server_mode(server_config: ServerConfiguration) {
         .tun_name("tun0")
         .up();
 
-    #[cfg(target_os = "linux")]
-	config.platform_config(|config| {
-		config.packet_information(true);
-	});
-
     let dev = tun2::create(&config).unwrap();
     let (mut dev_reader, mut dev_writer) = dev.split();
 

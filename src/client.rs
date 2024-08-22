@@ -69,11 +69,6 @@ pub async fn client_mode(client_config: ClientConfiguration) {
         .tun_name("tun0")
         .up();
 
-    #[cfg(target_os = "linux")]
-	config.platform_config(|config| {
-		config.packet_information(true);
-	});
-
     let dev = tun2::create(&config).unwrap();
     let (mut dev_reader, mut dev_writer) = dev.split();
 
