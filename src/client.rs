@@ -1,18 +1,18 @@
-use crossbeam_channel::{unbounded, Receiver};
-use tokio::{net::UdpSocket, sync::{mpsc, Mutex}};
-use tokio::task::JoinSet;
-use packet::{builder::Builder, icmp, ip};
+use crossbeam_channel::{unbounded};
+use tokio::{net::UdpSocket, sync::{Mutex}};
+
+
 use std::io::{Read, Write};
-use tun2::BoxError;
-use log::{error, info, warn, LevelFilter};
+
+use log::{error, info, warn};
 use std::sync::Arc;
-use std::net::{ SocketAddr, Ipv4Addr };
-use std::collections::HashMap;
+use std::net::{ Ipv4Addr };
+
 use std::process::Command;
-use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
+use x25519_dalek::{PublicKey, StaticSecret};
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
-    Aes256Gcm, Key, Nonce};
+    Aes256Gcm, Nonce};
 
 use crate::config::ClientConfiguration;
 use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
