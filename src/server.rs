@@ -11,8 +11,10 @@ use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
 use std::process::Command;
+use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
+Aes256Gcm, Key, Nonce };
 
-use crate::{ ServerConfiguration, ServerPeer, UDPSerializable, UDPVpnHandshake, VpnPacket };
+use crate::{ ServerConfiguration, ServerPeer, UDPSerializable, UDPVpnHandshake, UDPVpnPacket };
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
@@ -56,10 +58,19 @@ pub async fn server_mode(server_config: ServerConfiguration) {
             let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
             let mp = addrs_cl.lock().await;
             if let Some(peer) = mp.get(&ip) {
-                sock_snd.send_to(&buf[..n], peer.addr).await;
+                
+                let aes = Aes256Gcm::new(peer.shared_secret.as_bytes().into());
+                let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+
+                let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
+
+                if let Ok(ciphered_d) = ciphered_data {
+                    let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
+                    sock_snd.send_to(&vpn_packet.serialize(), peer.addr).await;
+                }
             } else {
                 // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
-                mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
+                //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
             }
             drop(mp);
         }
@@ -110,9 +121,15 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                             }
                         }, // handshake
                         1 => {
-                            if mp.values().any(| p | p.addr == addr) {
-                                send2tun.send((&buf[1..len]).to_vec());
-                            }
+                            let packet = UDPVpnPacket::deserialize(&(buf[..len].to_vec()));
+                            mp.values().filter(| p | p.addr == addr).for_each(|p| {
+                                let aes = Aes256Gcm::new(p.shared_secret.as_bytes().into());
+                                let nonce = Nonce::clone_from_slice(&packet.nonce);
+                                match aes.decrypt(&nonce, &packet.data[..]) {
+                                    Ok(decrypted) => { send2tun.send(decrypted); },
+                                    Err(error) => error!("Decryption error! {:?}", error)
+                                }
+                            });
                         }, // payload
                         _ => error!("Unexpected header value.")
                     }
