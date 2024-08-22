@@ -72,6 +72,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 
                 let aes = Aes256Gcm::new(&peer.shared_secret.into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+                
+                info!("Key: {:?} / nonce: {:?}", &peer.shared_secret, &nonce);
 
                 let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
 
