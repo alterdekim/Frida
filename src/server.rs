@@ -125,7 +125,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                     .diffie_hellman(&PublicKey::from(k));
                                 mp.insert(internal_ip, UDPeer { addr, shared_secret: *shared_secret.as_bytes() });
                                 
-                                let handshake_response = UDPVpnHandshake{ public_key: server_config.interface.public_key.clone().into_bytes(), request_ip: handshake.request_ip };
+                                let handshake_response = UDPVpnHandshake{ public_key: base64::decode(&server_config.interface.public_key).unwrap(), request_ip: handshake.request_ip };
 
                                 send2hnd.send((handshake_response, addr));
                             } else {
