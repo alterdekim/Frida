@@ -9,177 +9,14 @@ use serde_derive::Deserialize;
 use std::str::FromStr;
 use x25519_dalek::{StaticSecret, PublicKey};
 use rand::{rngs::StdRng, SeedableRng};
+use crate::config::{ ServerConfiguration, ClientConfiguration, ObfsConfig, ObfsProtocol, ServerPeer };
 
-//mod tcp_client;
-//mod tcp_server;
+
 mod server;
 mod client;
+mod udp;
+mod config;
 
-struct VpnPacket {
-    data: Vec<u8>
-}
-
-impl VpnPacket {
-    fn serialize(&self) -> Vec<u8> {
-        let len: [u8; 8] = (self.data.len() as u64).to_be_bytes();
-        len.iter().cloned().chain(self.data.iter().cloned()).collect()
-    }
-
-    fn deserialize_length(d: [u8; 8]) -> u64 {
-        u64::from_be_bytes(d)
-    }
-
-    fn deserialize(d: Vec<u8>) -> Result<Self, Error> {
-        Ok(VpnPacket{ data: d })
-    }
-}
-
-struct UDPVpnPacket {
-    nonce: Vec<u8>, // [u8; 12]
-    data: Vec<u8>
-}
-
-impl UDPSerializable for UDPVpnPacket {
-    fn serialize(&self) -> Vec<u8> {
-        let h: &[u8] = &[1];
-        [h, &self.nonce, &self.data[..]].concat()
-    }
-}
-
-impl UDPVpnPacket {
-    fn deserialize(data: &Vec<u8>) -> Self {
-        UDPVpnPacket { nonce: data[1..=12].to_vec(), data: data[13..].to_vec() }
-    }
-}
-
-struct UDPVpnHandshake {
-    public_key: Vec<u8>,
-    request_ip: Ipv4Addr // [u8; 4]
-}
-
-impl UDPSerializable for UDPVpnHandshake {
-    fn serialize(&self) -> Vec<u8> {
-        let h: &[u8] = &[0];
-        [h, &self.public_key[..], &self.request_ip.octets()].concat()
-    }
-}
-
-impl UDPVpnHandshake {
-    fn deserialize(data: &Vec<u8>) -> Self {
-        UDPVpnHandshake { public_key: data[1..=32].to_vec(), request_ip: Ipv4Addr::new(data[33], data[34], data[35], data[36]) }
-    }
-}
-
-trait UDPSerializable {
-    fn serialize(&self) -> Vec<u8>;
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct ServerInterface {
-    bind_address: String,
-    internal_address: String,
-    private_key: String,
-    public_key: String,
-    broadcast_mode: bool,
-    keepalive: u8
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-pub struct ServerPeer {
-    public_key: String,
-    ip: Ipv4Addr
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-enum ObfsProtocol {
-    DNSMask,
-    ICMPMask,
-    VEIL
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct ObfsConfig {
-    protocol: ObfsProtocol
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct ServerConfiguration {
-    interface: ServerInterface,
-    peers: Vec<ServerPeer>,
-    obfs: ObfsConfig,
-    dns: DNSConfig
-}
-
-impl ServerConfiguration {
-    fn default(bind_address: &str, internal_address: &str, broadcast_mode: bool, keepalive: u8, obfs_type: ObfsProtocol) -> Self {
-        let mut csprng = StdRng::from_entropy();
-        let secret = StaticSecret::new(&mut csprng);
-        ServerConfiguration { interface: ServerInterface { 
-                bind_address: String::from_str(bind_address).unwrap(), 
-                internal_address: String::from_str(internal_address).unwrap(), 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
-                broadcast_mode, 
-                keepalive 
-            }, 
-            peers: Vec::new(), 
-            obfs: ObfsConfig { protocol: obfs_type }, 
-            dns: DNSConfig { enabled: false, net_name: String::from_str("fridah.vpn").unwrap(), entries: Vec::new() } 
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct DNSConfig {
-    enabled: bool,
-    net_name: String,
-    entries: Vec<DNSEntry>
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct DNSEntry {
-    ip: Ipv4Addr,
-    subdomain: String
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct ClientInterface {
-    private_key: String,
-    public_key: String,
-    address: String
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct EndpointInterface {
-    public_key: String,
-    endpoint: String,
-    keepalive: u8
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct ClientConfiguration {
-    client: ClientInterface,
-    server: EndpointInterface
-}
-
-impl ClientConfiguration {
-    fn default(endpoint: &str, keepalive: u8, public_key: &str, internal_address: &str) -> Self {
-        let mut csprng = StdRng::from_entropy();
-        let secret = StaticSecret::new(&mut csprng);
-        ClientConfiguration { 
-            client: ClientInterface { 
-                private_key: base64::encode(secret.as_bytes()), 
-                public_key: base64::encode(PublicKey::from(&secret).as_bytes()),
-                address: String::from_str(internal_address).unwrap() 
-            }, 
-            server: EndpointInterface { 
-                public_key: String::from_str(public_key).unwrap(), 
-                endpoint: String::from_str(endpoint).unwrap(),
-                keepalive
-            } 
-        }
-    }
-}
 
 fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let bind_address = matches.value_of("bind-address").expect("No bind address specified");
@@ -189,7 +26,7 @@ fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let obfs_type = match matches.value_of("obfs-type").expect("Obfs type should be specified") {
         "dns" => ObfsProtocol::DNSMask,
         "icmp" => ObfsProtocol::ICMPMask,
-        _ => ObfsProtocol::VEIL
+        _ => ObfsProtocol::XOR
     };
 
     fs::write(config_path, serde_yaml::to_string(&ServerConfiguration::default(bind_address, internal_address, broadcast_mode, keepalive, obfs_type)).unwrap());
@@ -246,7 +83,7 @@ async fn main() {
         .filter(None, LevelFilter::Info)
         .init();
 
-    let matches = App::new("Frida VPN")
+    let matches = App::new("Frida")
         .version("0.1.2")
         .author("alterwain")
         .about("VPN software")
@@ -298,7 +135,7 @@ async fn main() {
             .takes_value(true))
         .arg(Arg::with_name("obfs-type")
             .long("obfs-type")
-            .possible_values(&["dns", "icmp", "veil"])
+            .possible_values(&["dns", "icmp", "xor"])
             .takes_value(true)
             .value_name("OBFS")
             .help("Obfuscation protocol (config)"))

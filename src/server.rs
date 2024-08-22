@@ -14,7 +14,9 @@ use std::process::Command;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Key, Nonce };
 
-use crate::{ ServerConfiguration, ServerPeer, UDPSerializable, UDPVpnHandshake, UDPVpnPacket };
+use crate::config::{ ServerConfiguration, ServerPeer};
+
+use crate::udp::{UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");

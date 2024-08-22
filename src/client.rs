@@ -15,7 +15,8 @@ use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Key, Nonce};
 
-use crate::{UDPVpnHandshake, UDPVpnPacket, VpnPacket, ClientConfiguration, UDPSerializable};
+use crate::config::ClientConfiguration;
+use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
