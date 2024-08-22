@@ -67,6 +67,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 if let Ok(ciphered_d) = ciphered_data {
                     let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
                     sock_snd.send_to(&vpn_packet.serialize(), peer.addr).await;
+                } else {
+                    error!("Traffic encryption failed.");
                 }
             } else {
                 // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)

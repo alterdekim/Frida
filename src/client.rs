@@ -4,7 +4,7 @@ use tokio::task::JoinSet;
 use packet::{builder::Builder, icmp, ip, Packet};
 use std::io::{Read, Write};
 use tun2::BoxError;
-use log::{error, info, LevelFilter};
+use log::{error, info, warn, LevelFilter};
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr };
 use std::collections::HashMap;
@@ -143,6 +143,8 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                                         Ok(decrypted) => { tx.send(decrypted); },
                                         Err(error) => error!("Decryption error! {:?}", error)
                                     }
+                                } else {
+                                    warn!("There is no static_secret");
                                 }
                             }, // payload
                             _ => error!("Unexpected header value.")
@@ -175,7 +177,11 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                     let serialized_data = vpn_packet.serialize();
                     info!("Writing to sock: {:?}", serialized_data);
                     sock_snd.send(&serialized_data).await.unwrap();
+                } else {
+                    error!("Socket encryption failed.");
                 }
+            } else {
+                warn!("There is no shared_secret in main loop");
             }
         }
     }
