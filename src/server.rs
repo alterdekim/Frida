@@ -1,9 +1,7 @@
 use crossbeam_channel::unbounded;
 use tokio::{net::UdpSocket, sync::Mutex};
 use x25519_dalek::{PublicKey, StaticSecret};
-use core::time;
 use std::io::{Read, Write};
-use std::thread;
 use base64::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
@@ -51,8 +49,11 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let addrs_lcl = addresses.clone();
     if keepalive_sec > 0 {
         tokio::spawn(async move {
+            let mut now = std::time::Instant::now();
+            let kps = std::time::Duration::from_secs(keepalive_sec.clone().into());
             loop {
-                thread::sleep(time::Duration::from_secs(keepalive_sec.into()));
+                if now.elapsed() < kps { continue; }
+                now = std::time::Instant::now();
                 let mmp = addrs_lcl.lock().await;
                 mmp.values().for_each(|p| {
                     let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
