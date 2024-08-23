@@ -1,9 +1,21 @@
 
 use std::net::Ipv4Addr;
+use chrono::{Timelike, Utc};
 
 pub struct UDPVpnPacket {
     pub nonce: Vec<u8>, // [u8; 12]
     pub data: Vec<u8>
+}
+
+pub struct UDPKeepAlive {
+
+}
+
+impl UDPSerializable for UDPKeepAlive {
+    fn serialize(&self) -> Vec<u8> {
+        let h: &[u8] = &[2];
+        [h, &[Utc::now().second() as u8]].concat()
+    }
 }
 
 impl UDPSerializable for UDPVpnPacket {

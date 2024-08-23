@@ -139,6 +139,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                                     warn!("There is no static_secret");
                                 }
                             }, // payload
+                            2 => info!("Got keepalive packet"),
                             _ => error!("Unexpected header value.")
                         }
                     },

@@ -1,7 +1,9 @@
 use crossbeam_channel::unbounded;
 use tokio::{net::UdpSocket, sync::Mutex};
 use x25519_dalek::{PublicKey, StaticSecret};
+use core::time;
 use std::io::{Read, Write};
+use std::thread;
 use base64::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
@@ -11,7 +13,7 @@ use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
 
 use crate::config::{ ServerConfiguration, ServerPeer};
-use crate::udp::{UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
+use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
@@ -34,7 +36,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
     let (send2tun, recv2tun) = unbounded::<Vec<u8>>();
 
-    let (send2hnd, recv2hnd) = unbounded::<(UDPVpnHandshake, SocketAddr)>();
+    let (send2hnd, recv2hnd) = unbounded::<(Vec<u8>, SocketAddr)>();
 
     tokio::spawn(async move {
         loop {
@@ -44,10 +46,26 @@ pub async fn server_mode(server_config: ServerConfiguration) {
         }
     });
 
+    let keepalive_sec = server_config.interface.keepalive;
+    let send2hnd_cl = send2hnd.clone();
+    let addrs_lcl = addresses.clone();
+    if keepalive_sec > 0 {
+        tokio::spawn(async move {
+            loop {
+                thread::sleep(time::Duration::from_secs(keepalive_sec.into()));
+                let mp = addrs_lcl.lock().await;
+                mp.values().for_each(|p| {
+                    let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
+                });
+                drop(mp);
+            }
+        });
+    }
+
     tokio::spawn(async move {
         loop {
             if let Ok((handshake, addr)) = recv2hnd.recv() {
-                let _ = sock_hnd.send_to(&handshake.serialize(), addr).await;
+                let _ = sock_hnd.send_to(&handshake, addr).await;
             }
         }
     });
@@ -119,7 +137,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 
                                 let handshake_response = UDPVpnHandshake{ public_key: BASE64_STANDARD.decode(&server_config.interface.public_key).unwrap(), request_ip: handshake.request_ip };
 
-                                let _ = send2hnd.send((handshake_response, addr));
+                                let _ = send2hnd.send((handshake_response.serialize(), addr));
                             } else {
                                 info!("Bad handshake");
                                 plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));

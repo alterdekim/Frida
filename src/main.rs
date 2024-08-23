@@ -11,7 +11,7 @@ use log::{error, LevelFilter};
 
 use crate::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
 
-
+mod obfs;
 mod server;
 mod client;
 mod udp;
@@ -24,9 +24,10 @@ fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let broadcast_mode = matches.value_of("broadcast-mode").is_some();
     let keepalive: u8 = matches.value_of("keepalive").unwrap().parse().expect("Keepalive argument should be a number");
     let obfs_type = match matches.value_of("obfs-type").expect("Obfs type should be specified") {
-        "dns" => ObfsProtocol::DNSMask,
-        "icmp" => ObfsProtocol::ICMPMask,
-        _ => ObfsProtocol::XOR
+        "dns" => ObfsProtocol::FakeDNS,
+        "veil" => ObfsProtocol::VEIL,
+        "xor" => ObfsProtocol::XOR,
+        _ => ObfsProtocol::NONE
     };
 
     let _ = fs::write(config_path, serde_yaml::to_string(&ServerConfiguration::default(bind_address, internal_address, broadcast_mode, keepalive, obfs_type)).unwrap());

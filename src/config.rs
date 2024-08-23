@@ -24,9 +24,10 @@ pub struct ServerPeer {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum ObfsProtocol {
-    DNSMask,
-    ICMPMask,
-    XOR
+    FakeDNS,
+    VEIL,
+    XOR,
+    NONE
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
