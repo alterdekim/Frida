@@ -45,7 +45,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     });
 
     let keepalive_sec = server_config.interface.keepalive.clone();
-    let send2hnd_cl = send2hnd.clone();
+ //   let send2hnd_cl = send2hnd.clone();
     let addrs_lcl = addresses.clone();
     if keepalive_sec > 0 {
         tokio::spawn(async move {
@@ -56,7 +56,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 now = std::time::Instant::now();
                 let mut mmp = addrs_lcl.lock().await;
                 mmp.values().for_each(|p| {
-                    let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
+                    //let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
                 });
                 drop(mmp);
             }
