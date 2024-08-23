@@ -54,7 +54,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
             loop {
                 if now.elapsed() < kps { continue; }
                 now = std::time::Instant::now();
-                let mmp = addrs_lcl.lock().await;
+                let mut mmp = addrs_lcl.lock().await;
                 mmp.values().for_each(|p| {
                     let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
                 });
