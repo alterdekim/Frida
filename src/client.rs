@@ -88,7 +88,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
 
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
-            info!("Write to tun {:?}", hex::encode(&bytes));
+            //info!("Write to tun {:?}", hex::encode(&bytes));
             dev_writer.write_all(&bytes).unwrap();
         }
     });
@@ -124,7 +124,6 @@ pub async fn client_mode(client_config: ClientConfiguration) {
                                 }
                                 *s_cipher = Some(StaticSecret::from(k1)
                                     .diffie_hellman(&PublicKey::from(k)));
-                                // Aes256Gcm::new(shared_secret.as_bytes().into());
                             }, // handshake
                             1 => {
                                 let wrapped_packet = UDPVpnPacket::deserialize(&(buf[..l].to_vec()));
@@ -162,13 +161,11 @@ pub async fn client_mode(client_config: ClientConfiguration) {
             if s_c.is_some() {
                 let aes = Aes256Gcm::new(s_c.as_ref().unwrap().as_bytes().into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-                info!("Key {:?} / nonce {:?}", s_c.as_ref().unwrap().as_bytes(), &nonce.bytes());
                 let ciphered_data = aes.encrypt(&nonce, &bytes[..]);
                 
                 if let Ok(ciphered_d) = ciphered_data {
                     let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
                     let serialized_data = vpn_packet.serialize();
-                    info!("Writing to sock: {:?}", serialized_data);
                     sock_snd.send(&serialized_data).await.unwrap();
                 } else {
                     error!("Socket encryption failed.");

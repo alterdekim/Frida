@@ -49,9 +49,10 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let addrs_lcl = addresses.clone();
     if keepalive_sec > 0 {
         tokio::spawn(async move {
+            let kp_sc = keepalive_sec.clone();
             loop {
-                time::sleep(time::Duration::from_secs(3)).await;
-                let mut mmp = addrs_lcl.lock().await;
+                time::sleep(time::Duration::from_secs(kp_sc.into())).await;
+                let mmp = addrs_lcl.lock().await;
                 mmp.values().for_each(|p| {
                     let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
                 });
@@ -113,9 +114,8 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                 Some(h) => {
                     match h {
                         0 => {
-                            // (&buf[1..len]).to_vec()
                             let handshake = UDPVpnHandshake::deserialize(&buf);
-                            info!("Got handshake! ip: {:?}; key: {:?}", handshake.request_ip, BASE64_STANDARD.encode(&handshake.public_key));
+                            info!("Got handshake from {:?}", handshake.request_ip);
                             let skey = BASE64_STANDARD.encode(&handshake.public_key);
                             if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
                                 let internal_ip = IpAddr::V4(handshake.request_ip);
@@ -138,13 +138,12 @@ pub async fn server_mode(server_config: ServerConfiguration) {
                                 let _ = send2hnd.send((handshake_response.serialize(), addr));
                             } else {
                                 info!("Bad handshake");
-                                plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
+                                //plp.iter().for_each(|c| info!("ip: {:?}; pkey: {:?}", c.ip, c.public_key));
                             }
                         }, // handshake
                         1 => {
                             let packet = UDPVpnPacket::deserialize(&(buf[..len].to_vec()));
                             mp.values().filter(| p | p.addr == addr).for_each(|p| {
-                                info!("Key {:?} / nonce {:?}", &p.shared_secret, &packet.nonce);
                                 let aes = Aes256Gcm::new(&p.shared_secret.into());
                                 let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                 match aes.decrypt(&nonce, &packet.data[..]) {
