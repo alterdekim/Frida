@@ -154,7 +154,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
 
     let pkey = BASE64_STANDARD.decode(client_config.client.public_key).unwrap();
     let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: client_config.client.address.parse::<Ipv4Addr>().unwrap() };
-    let nz = 0;
+    let mut nz = 0;
     while nz < 25 {
         sock_snd.send(&handshake.serialize()).await.unwrap();
         nz += 1
