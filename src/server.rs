@@ -108,6 +108,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
     loop {
         if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
+            info!("There is packet!");
             let mut mp = addrs_lp.lock().await;
             let plp = peers_lp.lock().await;
             match buf.first() {

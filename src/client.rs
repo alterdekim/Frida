@@ -16,9 +16,10 @@ use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 
 fn configure_routes() {
     let ip_output = Command::new("ip")
-        .arg("addr")
+        .arg("-4")
+        .arg("address")
         .arg("add")
-        .arg("10.8.0.2/24")
+        .arg("10.66.66.2/32")
         .arg("dev")
         .arg("tun0")
         .output()
@@ -32,6 +33,8 @@ fn configure_routes() {
     let link_output = Command::new("ip")
         .arg("link")
         .arg("set")
+        .arg("mtu")
+        .arg("1420")
         .arg("up")
         .arg("dev")
         .arg("tun0")
