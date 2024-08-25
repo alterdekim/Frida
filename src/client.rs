@@ -77,8 +77,9 @@ pub async fn client_mode(client_config: ClientConfiguration) {
 
     #[cfg(target_os = "linux")]
     configure_routes();
-
-    let sock = UdpSocket::bind("0.0.0.0:59611").await.unwrap();
+    
+    // 59611
+    let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
     sock.connect(&client_config.server.endpoint).await.unwrap();
 
     let sock_rec = Arc::new(sock);
