@@ -16,14 +16,14 @@ use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
     
-    //let mut config = tun2::Configuration::default();
-    //config.address(&server_config.interface.internal_address)
-    //    .netmask("255.255.255.0")
-    //    .tun_name("tun0")
-    //    .up();
+    let mut config = tun2::Configuration::default();
+    config.address(&server_config.interface.internal_address)
+        .netmask("255.255.255.0")
+        .tun_name("tun0")
+        .up();
 
-    //let dev = tun2::create(&config).unwrap();
-    //let (mut dev_reader, mut dev_writer) = dev.split();
+    let dev = tun2::create(&config).unwrap();
+    let (mut dev_reader, mut dev_writer) = dev.split();
 
     let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();
     let sock_rec = Arc::new(sock);
@@ -36,13 +36,13 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
     let (send2hnd, recv2hnd) = unbounded::<(Vec<u8>, SocketAddr)>();
 
-   /* tokio::spawn(async move {
+    tokio::spawn(async move {
         loop {
             if let Ok(bytes) = recv2tun.recv() {
                 dev_writer.write_all(&bytes).unwrap();
             }
         }
-    });*/
+    });
 
     let keepalive_sec = server_config.interface.keepalive.clone();
     let send2hnd_cl = send2hnd.clone();
@@ -70,7 +70,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     });
 
     let addrs_cl = addresses.clone();
-  /*  tokio::spawn(async move {
+    tokio::spawn(async move {
         let mut buf = vec![0; 4096];
         while let Ok(n) = dev_reader.read(&mut buf) {
             if n <= 19 { continue; }
@@ -96,7 +96,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
             }
             drop(mp);
         }
-    });*/
+    });
     
     let mut buf = vec![0; 2048];
     let addrs_lp = addresses.clone();
