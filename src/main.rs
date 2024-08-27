@@ -78,6 +78,7 @@ async fn init_client(cfg_raw: &str) {
 
 #[tokio::main]
 async fn main() {
+    //console_subscriber::init();
 
     // Initialize the logger with 'info' as the default level
     Builder::new()

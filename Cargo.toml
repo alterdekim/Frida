@@ -3,12 +3,15 @@ name = "rustvpn"
 version = "0.1.2"
 edition = "2021"
 
+[build]
+rustflags = ["--cfg", "tokio_unstable"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = "2.33"
 aes-gcm = "0.10.3"
-tokio = { version = "1", features = ["full", "signal"] }
+tokio = { version = "1", features = ["full", "signal", "tracing"] }
 serde = "1.0"
 serde_derive = "1.0.190"
 rand = { version = "0.8.5", features = ["small_rng", "getrandom", "std_rng"] }
@@ -19,7 +22,7 @@ socket2 = "0.4"
 env_logger = "0.9"
 log = "0.4.20"
 futures = "0.3.30"
-tun2 = "2.0.5"
+tun2 = { version = "2", features = ["async"] }
 packet = "0.1.4"
 crossbeam-channel = "0.5.13"
 hex = "0.4"
@@ -27,3 +30,4 @@ serde_yaml = "0.9.34"
 x25519-dalek = { version = "2.0.1", features = ["getrandom", "static_secrets"] }
 base64 = "0.22.1"
 chrono = "0.4.38"
+console-subscriber = "0.4.0"

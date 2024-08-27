@@ -65,6 +65,12 @@ fn configure_routes() {
 pub async fn client_mode(client_config: ClientConfiguration) {
     info!("Starting client...");
 
+
+    
+    // 59611
+    let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
+    sock.connect(&client_config.server.endpoint).await.unwrap();
+
     let mut config = tun2::Configuration::default();
     config.address(&client_config.client.address)
         .netmask("128.0.0.0")
@@ -75,12 +81,8 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     let dev = tun2::create(&config).unwrap();
     let (mut dev_reader, mut dev_writer) = dev.split();
 
-    #[cfg(target_os = "linux")]
-    configure_routes();
-    
-    // 59611
-    let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
-    sock.connect(&client_config.server.endpoint).await.unwrap();
+    //#[cfg(target_os = "linux")]
+    //configure_routes();
 
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();
