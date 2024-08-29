@@ -531,6 +531,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "frida_vpn"
+version = "0.1.2"
+dependencies = [
+ "aes-gcm",
+ "base64 0.22.1",
+ "block-modes",
+ "block-padding",
+ "chrono",
+ "clap",
+ "console-subscriber",
+ "crossbeam-channel",
+ "env_logger",
+ "futures",
+ "generic-array",
+ "hex",
+ "log",
+ "packet",
+ "rand",
+ "serde",
+ "serde_derive",
+ "serde_yaml",
+ "socket2 0.4.10",
+ "tokio",
+ "tun2",
+ "x25519-dalek",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1336,34 +1364,6 @@ name = "rustversion"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
-
-[[package]]
-name = "rustvpn"
-version = "0.1.2"
-dependencies = [
- "aes-gcm",
- "base64 0.22.1",
- "block-modes",
- "block-padding",
- "chrono",
- "clap",
- "console-subscriber",
- "crossbeam-channel",
- "env_logger",
- "futures",
- "generic-array",
- "hex",
- "log",
- "packet",
- "rand",
- "serde",
- "serde_derive",
- "serde_yaml",
- "socket2 0.4.10",
- "tokio",
- "tun2",
- "x25519-dalek",
-]
 
 [[package]]
 name = "ryu"

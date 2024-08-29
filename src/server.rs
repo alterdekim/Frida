@@ -1,10 +1,8 @@
 //use crossbeam_channel::unbounded;
 use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
-use tokio::task::JoinSet;
 use tokio::{net::UdpSocket, sync::Mutex, time};
 use x25519_dalek::{PublicKey, StaticSecret};
-use std::io::{Read, Write};
 use base64::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
@@ -50,19 +48,19 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let keepalive_sec = server_config.interface.keepalive.clone();
     let send2hnd_cl = send2hnd.clone();
     let addrs_lcl = addresses.clone();
-   /* if keepalive_sec > 0 {
-        set.spawn(async move {
-            let kp_sc = keepalive_sec.clone();
-            loop {
-                time::sleep(time::Duration::from_secs(kp_sc.into())).await;
-                let mmp = addrs_lcl.lock().await;
-                mmp.values().for_each(|p| {
-                    let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
-                });
-                drop(mmp);
-            }
-        });
-    }*/
+
+    let alive_task = tokio::spawn(async move {
+        let kp_sc = keepalive_sec.clone();
+        if kp_sc <= 0 { return; }
+        loop {
+            time::sleep(time::Duration::from_secs(kp_sc.into())).await;
+            let mmp = addrs_lcl.lock().await;
+            mmp.values().for_each(|p| {
+                let _ = send2hnd_cl.send((UDPKeepAlive{}.serialize(), p.addr));
+            });
+            drop(mmp);
+        }
+    });
 
     let sock_writer_task = tokio::spawn(async move {
         loop {
@@ -90,7 +88,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
 
                 if let Ok(ciphered_d) = ciphered_data {
                     let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                    send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
+                    let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
                 } else {
                     error!("Traffic encryption failed.");
                 }
@@ -171,7 +169,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
         }
     });
     
-    tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task);
+    tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task, alive_task);
 }
 
 struct UDPeer {
