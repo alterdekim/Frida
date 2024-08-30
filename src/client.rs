@@ -24,8 +24,8 @@ pub async fn client_mode(client_config: ClientConfiguration) {
 
     let mut config = tun2::Configuration::default();
     config.address(&client_config.client.address)
-        .netmask("128.0.0.0")
-        .destination("0.0.0.0")
+        .netmask("255.255.255.255")
+        .destination(&client_config.client.address)
         .tun_name("tun0")
         .up();
 
