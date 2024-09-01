@@ -16,9 +16,6 @@ use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 pub async fn client_mode(client_config: ClientConfiguration) {
     info!("Starting client...");
 
-
-    
-    // 59611
     let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
     sock.connect(&client_config.server.endpoint).await.unwrap();
 
