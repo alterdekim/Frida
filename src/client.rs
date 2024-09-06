@@ -1,6 +1,7 @@
 use crossbeam_channel::unbounded;
+use socket2::SockAddr;
 use tokio::{net::UdpSocket, sync::Mutex};
-use std::io::{Read, Write};
+use std::{io::{Read, Write}, net::SocketAddr};
 use base64::prelude::*;
 use log::{error, info, warn};
 use std::sync::Arc;
@@ -94,8 +95,9 @@ pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option
         }
     });
 
+    let s_a: SocketAddr = client_config.server.endpoint.parse().unwrap();
     #[cfg(target_os = "linux")]
-    configure_routes(client_config.server.endpoint.split(":")[0], s_interface);
+    configure_routes(&s_a.ip().to_string(), s_interface);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     

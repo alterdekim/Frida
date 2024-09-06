@@ -1,8 +1,8 @@
 # Frida
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/alterdekim/Frida)
-![Jenkins Build](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.awain.net%2Fjob%2FFrida%2F)
-![docs.rs](https://img.shields.io/docsrs/:crate)
+[![Jenkins Build](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.awain.net%2Fjob%2FFrida%2F)](https://jenkins.awain.net/job/Frida/)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/alterdekim/Frida)
 ![GitHub Repo stars](https://img.shields.io/github/stars/alterdekim/Frida)
 
 
