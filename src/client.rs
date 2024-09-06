@@ -6,12 +6,53 @@ use log::{error, info, warn};
 use std::sync::Arc;
 use std::net::Ipv4Addr;
 use x25519_dalek::{PublicKey, StaticSecret};
+use std::process::Command;
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce};
 
 use crate::config::ClientConfiguration;
 use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+use network_interface::NetworkInterface;
+use network_interface::NetworkInterfaceConfig;
+
+fn configure_routes(endpoint_ip: &str) {
+    let interfaces = NetworkInterface::show().unwrap();
+
+    let net_inter = interfaces.iter()
+        .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
+        .min_by(|x, y| x.index.cmp(&y.index))
+        .unwrap();
+
+    info!("Main network interface: {:?}", &net_inter.name);
+
+    let mut ip_output = Command::new("ip")
+        .arg("-4")
+        .arg("route")
+        .arg("add")
+        .arg("0.0.0.0/0")
+        .arg("dev")
+        .arg("tun0")
+        .output()
+        .expect("Failed to execute ip route command.");
+
+    if !ip_output.status.success() {
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+
+    ip_output = Command::new("ip")
+        .arg("route")
+        .arg("add")
+        .arg(endpoint_ip.to_owned()+"/32")
+        .arg("dev")
+        .arg(&net_inter.name)
+        .output()
+        .expect("Failed to execute ip route command.");
+
+    if !ip_output.status.success() {
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+}
 
 pub async fn client_mode(client_config: ClientConfiguration) {
     info!("Starting client...");
@@ -50,6 +91,9 @@ pub async fn client_mode(client_config: ClientConfiguration) {
             dx.send(buf[..n].to_vec()).unwrap();
         }
     });
+
+    #[cfg(target_os = "linux")]
+    configure_routes(client_config.server.endpoint.split(":")[0]);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     

@@ -8,11 +8,77 @@ use log::{error, info};
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
+use std::process::Command;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
+use network_interface::NetworkInterface;
+use network_interface::NetworkInterfaceConfig;
 
 use crate::config::{ ServerConfiguration, ServerPeer};
 use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
+
+fn configure_routes() {
+    let interfaces = NetworkInterface::show().unwrap();
+
+    let net_inter = interfaces.iter()
+        .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
+        .min_by(|x, y| x.index.cmp(&y.index))
+        .unwrap();
+
+    info!("Main network interface: {:?}", net_inter.name);
+
+    let mut ip_output = Command::new("iptables")
+        .arg("-A")
+        .arg("FORWARD")
+        .arg("-i")
+        .arg("tun0")
+        .arg("-o")
+        .arg(&net_inter.name)
+        .arg("-j")
+        .arg("ACCEPT")
+        .output()
+        .expect("Failed to execute iptables command.");
+
+    if !ip_output.status.success() {
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+
+    ip_output = Command::new("iptables")
+        .arg("-A")
+        .arg("FORWARD")
+        .arg("-i")
+        .arg(&net_inter.name)
+        .arg("-o")
+        .arg("tun0")
+        .arg("-m")
+        .arg("state")
+        .arg("--state")
+        .arg("ESTABLISHED,RELATED")
+        .arg("-j")
+        .arg("ACCEPT")
+        .output()
+        .expect("Failed to execute iptables command.");
+
+    if !ip_output.status.success() {
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+    
+    ip_output = Command::new("iptables")
+        .arg("-t")
+        .arg("nat")
+        .arg("-A")
+        .arg("POSTROUTING")
+        .arg("-o")
+        .arg(&net_inter.name)
+        .arg("-j")
+        .arg("MASQUERADE")
+        .output()
+        .expect("Failed to execute iptables command.");
+
+    if !ip_output.status.success() {
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+}
 
 pub async fn server_mode(server_config: ServerConfiguration) {
     info!("Starting server...");
@@ -35,6 +101,9 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let (send2tun, mut recv2tun) = mpsc::unbounded_channel::<Vec<u8>>(); // unbounded::<Vec<u8>>();
 
     let (send2hnd, mut recv2hnd) = mpsc::unbounded_channel::<(Vec<u8>, SocketAddr)>(); // unbounded::<(Vec<u8>, SocketAddr)>();
+
+    #[cfg(target_os = "linux")]
+    configure_routes();
 
     let tun_writer_task = tokio::spawn(async move {
         loop {
