@@ -8,9 +8,38 @@
 
 A lightweight VPN software, focused on scalability, traffic obfuscation and simplicity.
 
-## Documentation
+## CLI Arguments
 
-Check the [repository wiki]() to access the documentation, tutorials.
+### Usage
+
+```bash
+./frida_vpn [FLAGS] [OPTIONS] <mode> --config <FILE>
+```
+
+### Options
+| Name        | Value type           | Description  |
+| ------------- |:-------------:| -----:|
+| bind-address      | IP:PORT | The ip:port that would be used to bind server (config) |
+| config      | FILE_PATH      |   The path to VPN configuration file |
+| endpoint | IP:PORT      |    The ip:port that would be used by client to connect (config) |
+| interface | NAME      |    Explicitly set network interface name for routing |
+| internal-address | IP      |   The address of VPN server in it's subnet (config)  |
+| keepalive | SECONDS_UINT      |   Keepalive packets interval (config) [default: 0]  |
+| obfs-type | OBFS      |    Obfuscation protocol (config) [possible values: dns, veil, xor] |
+| peer-cfg | FILE_PATH      |    The path to VPN peer configuration file |
+
+### Flags
+| Name (short)        | Name (long)           | Description  |
+| ------------- |:-------------:| -----:|
+|       | broadcast-mode | If set to true, then all incoming traffic with an unknown destination address will be forwarded to all peers (config) |
+|       | grab-endpoint      |   If set to true, the endpoint address for peers will be grabbed from server config (config) |
+| h | help      |    Prints help information |
+| V | version      |    Prints version information |
+
+### Args
+| Name        | Required       | Description |
+| ------------- |:-------------:| -----:|
+| mode        | true           | Runs the program in certain mode [possible values: server, client, gen_cfg, new_peer] |
 
 ## Installation
 

@@ -1,4 +1,3 @@
-//use crossbeam_channel::unbounded;
 use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio::{net::UdpSocket, sync::Mutex, time};
@@ -17,7 +16,7 @@ use network_interface::NetworkInterfaceConfig;
 use crate::config::{ ServerConfiguration, ServerPeer};
 use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 
-fn configure_routes() {
+fn configure_routes(s_interface: Option<&str>) {
     let interfaces = NetworkInterface::show().unwrap();
 
     let net_inter = interfaces.iter()
@@ -27,13 +26,15 @@ fn configure_routes() {
 
     info!("Main network interface: {:?}", net_inter.name);
 
+    let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
+
     let mut ip_output = Command::new("iptables")
         .arg("-A")
         .arg("FORWARD")
         .arg("-i")
         .arg("tun0")
         .arg("-o")
-        .arg(&net_inter.name)
+        .arg(inter_name)
         .arg("-j")
         .arg("ACCEPT")
         .output()
@@ -47,7 +48,7 @@ fn configure_routes() {
         .arg("-A")
         .arg("FORWARD")
         .arg("-i")
-        .arg(&net_inter.name)
+        .arg(inter_name)
         .arg("-o")
         .arg("tun0")
         .arg("-m")
@@ -69,7 +70,7 @@ fn configure_routes() {
         .arg("-A")
         .arg("POSTROUTING")
         .arg("-o")
-        .arg(&net_inter.name)
+        .arg(inter_name)
         .arg("-j")
         .arg("MASQUERADE")
         .output()
@@ -80,7 +81,7 @@ fn configure_routes() {
     }
 }
 
-pub async fn server_mode(server_config: ServerConfiguration) {
+pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
@@ -103,7 +104,7 @@ pub async fn server_mode(server_config: ServerConfiguration) {
     let (send2hnd, mut recv2hnd) = mpsc::unbounded_channel::<(Vec<u8>, SocketAddr)>(); // unbounded::<(Vec<u8>, SocketAddr)>();
 
     #[cfg(target_os = "linux")]
-    configure_routes();
+    configure_routes(s_interface);
 
     let tun_writer_task = tokio::spawn(async move {
         loop {

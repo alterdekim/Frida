@@ -16,7 +16,7 @@ use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 use network_interface::NetworkInterface;
 use network_interface::NetworkInterfaceConfig;
 
-fn configure_routes(endpoint_ip: &str) {
+fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
     let interfaces = NetworkInterface::show().unwrap();
 
     let net_inter = interfaces.iter()
@@ -25,6 +25,8 @@ fn configure_routes(endpoint_ip: &str) {
         .unwrap();
 
     info!("Main network interface: {:?}", &net_inter.name);
+
+    let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
 
     let mut ip_output = Command::new("ip")
         .arg("-4")
@@ -45,7 +47,7 @@ fn configure_routes(endpoint_ip: &str) {
         .arg("add")
         .arg(endpoint_ip.to_owned()+"/32")
         .arg("dev")
-        .arg(&net_inter.name)
+        .arg(inter_name)
         .output()
         .expect("Failed to execute ip route command.");
 
@@ -54,7 +56,7 @@ fn configure_routes(endpoint_ip: &str) {
     }
 }
 
-pub async fn client_mode(client_config: ClientConfiguration) {
+pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option<&str>) {
     info!("Starting client...");
 
     let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
@@ -93,7 +95,7 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     });
 
     #[cfg(target_os = "linux")]
-    configure_routes(client_config.server.endpoint.split(":")[0]);
+    configure_routes(client_config.server.endpoint.split(":")[0], s_interface);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     

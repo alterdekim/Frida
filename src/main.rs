@@ -1,14 +1,8 @@
 
 use std::{fs, net::{Ipv4Addr}, str};
-
 use clap::{App, Arg, ArgMatches};
 use env_logger::Builder;
 use log::{error, LevelFilter};
-
-
-
-
-
 use crate::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
 
 mod obfs;
@@ -16,7 +10,6 @@ mod server;
 mod client;
 mod udp;
 mod config;
-
 
 fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let bind_address = matches.value_of("bind-address").expect("No bind address specified");
@@ -66,14 +59,14 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
     let _ = fs::write(config_path, serde_yaml::to_string(&config).unwrap());
 }
 
-async fn init_server(cfg_raw: &str ) {
+async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
     let config: ServerConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad server config file structure");
-    server::server_mode(config).await;
+    server::server_mode(config, s_interface).await;
 }
 
-async fn init_client(cfg_raw: &str) {
+async fn init_client(cfg_raw: &str, s_interface: Option<&str>) {
     let config: ClientConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad client config file structure");
-    client::client_mode(config).await;
+    client::client_mode(config, s_interface).await;
 }
 
 #[tokio::main]
@@ -93,7 +86,7 @@ async fn main() {
             .required(true)
             .index(1)
             .possible_values(&["server", "client", "gen_cfg", "new_peer"])
-            .help("Runs the program in either server or client mode"))
+            .help("Runs the program in certain mode"))
         .arg(Arg::with_name("config")
             .long("config")
             .required(true)
@@ -137,10 +130,16 @@ async fn main() {
             .takes_value(true))
         .arg(Arg::with_name("obfs-type")
             .long("obfs-type")
-            .possible_values(&["dns", "icmp", "xor"])
+            .possible_values(&["dns", "veil", "xor"])
             .takes_value(true)
             .value_name("OBFS")
             .help("Obfuscation protocol (config)"))
+        .arg(Arg::with_name("interface")
+            .long("interface")
+            .required(false)
+            .takes_value(true)
+            .value_name("NAME")
+            .help("Explicitly set network interface name for routing"))
         .get_matches();
 
     let mode = matches.value_of("mode").unwrap();
@@ -160,8 +159,8 @@ async fn main() {
         let cfg_raw = &String::from_utf8(data.unwrap()).unwrap();
 
         match mode {
-            "server" => init_server(cfg_raw).await,
-            "client" => init_client(cfg_raw).await,
+            "server" => init_server(cfg_raw, matches.value_of("interface")).await,
+            "client" => init_client(cfg_raw, matches.value_of("interface")).await,
             "new_peer" => generate_peer_config(&matches, config_path, cfg_raw),
             _ => error!("There is config file already")
         }
