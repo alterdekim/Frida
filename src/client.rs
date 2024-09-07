@@ -47,6 +47,8 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
         .arg("route")
         .arg("add")
         .arg(endpoint_ip.to_owned()+"/32")
+        .arg("via")
+        .arg("192.168.0.1")
         .arg("dev")
         .arg(inter_name)
         .output()
