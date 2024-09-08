@@ -29,7 +29,8 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
 
     let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
 
-    let mut ip_output = Command::new("ip")
+    let mut ip_output = Command::new("sudo")
+        .arg("ip")
         .arg("-4")
         .arg("route")
         .arg("add")
@@ -43,7 +44,8 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
         error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
 
-    ip_output = Command::new("ip")
+    ip_output = Command::new("sudo")
+        .arg("ip")
         .arg("route")
         .arg("add")
         .arg(endpoint_ip.to_owned()+"/32")
