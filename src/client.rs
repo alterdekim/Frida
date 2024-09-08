@@ -27,7 +27,7 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
 
     let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
 
-    info!("Main network interface: {:?}", &net_inter.name);
+    info!("Main network interface: {:?}", inter_name);
 
     let mut ip_output = Command::new("sudo")
         .arg("ip")
@@ -63,6 +63,7 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
 
 pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option<&str>) {
     info!("Starting client...");
+    info!("s_interface: {:?}", s_interface);
 
     let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
     sock.connect(&client_config.server.endpoint).await.unwrap();
