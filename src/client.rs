@@ -82,7 +82,7 @@ pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option
 
     let mut config = tun2::Configuration::default();
     config.address(&client_config.client.address)
-        .netmask("255.255.255.255")
+        .netmask("0.0.0.0")
         .destination("10.66.66.1")
         .tun_name("tun0")
         .up();
@@ -113,8 +113,8 @@ pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option
     });
 
     let s_a: SocketAddr = client_config.server.endpoint.parse().unwrap();
-    #[cfg(target_os = "linux")]
-    configure_routes(&s_a.ip().to_string(), s_interface);
+    //#[cfg(target_os = "linux")]
+    //configure_routes(&s_a.ip().to_string(), s_interface);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     
