@@ -25,9 +25,9 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
         .min_by(|x, y| x.index.cmp(&y.index))
         .unwrap();
 
-    info!("Main network interface: {:?}", &net_inter.name);
-
     let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
+
+    info!("Main network interface: {:?}", &net_inter.name);
 
     let mut ip_output = Command::new("sudo")
         .arg("ip")
