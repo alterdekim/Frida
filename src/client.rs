@@ -32,17 +32,28 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
     let mut ip_output = Command::new("sudo")
         .arg("ip")
         .arg("route")
-        .arg("change")
+        .arg("del")
         .arg("default")
-        .arg("via")
-        .arg("10.66.66.1")
+        .output()
+        .expect("Failed to delete default gateway.");
+
+    if !ip_output.status.success() {
+        error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+    }
+
+    ip_output = Command::new("sudo")
+        .arg("ip")
+        .arg("-4")
+        .arg("route")
+        .arg("add")
+        .arg("0.0.0.0/0")
         .arg("dev")
         .arg("tun0")
         .output()
         .expect("Failed to execute ip route command.");
 
     if !ip_output.status.success() {
-        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
 
     ip_output = Command::new("sudo")
@@ -55,10 +66,10 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
         .arg("dev")
         .arg(inter_name)
         .output()
-        .expect("Failed to execute ip route command.");
+        .expect("Failed to make exception for vpns endpoint.");
 
     if !ip_output.status.success() {
-        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        error!("Failed to make exception for vpns endpoint: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
 }
 

@@ -554,6 +554,7 @@ dependencies = [
  "serde_derive",
  "serde_yaml",
  "socket2 0.4.10",
+ "socks5-server",
  "tokio",
  "tun2",
  "x25519-dalek",
@@ -1498,6 +1499,29 @@ checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "socks5-proto"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d91431c4672e25e372ef46bc554be8f315068c03608f99267a71ad32a12e8c4"
+dependencies = [
+ "bytes",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "socks5-server"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5223c26981806584cc38c74fddf58808dbdcf4724890471ced69e7a2e8d86345"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "socks5-proto",
+ "tokio",
 ]
 
 [[package]]

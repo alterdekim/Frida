@@ -10,6 +10,7 @@ mod server;
 mod client;
 mod udp;
 mod config;
+//mod client_socks;
 
 fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let bind_address = matches.value_of("bind-address").expect("No bind address specified");
