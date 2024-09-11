@@ -29,7 +29,7 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
 
     info!("Main network interface: {:?}", inter_name);
 
-    let mut ip_output = Command::new("sudo")
+    /*let mut ip_output = Command::new("sudo")
         .arg("ip")
         .arg("route")
         .arg("del")
@@ -39,9 +39,9 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
 
     if !ip_output.status.success() {
         error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
-    }
+    }*/
 
-    ip_output = Command::new("sudo")
+    let mut ip_output = Command::new("sudo")
         .arg("ip")
         .arg("-4")
         .arg("route")
@@ -69,7 +69,7 @@ fn configure_routes(endpoint_ip: &str, s_interface: Option<&str>) {
         .expect("Failed to make exception for vpns endpoint.");
 
     if !ip_output.status.success() {
-        error!("Failed to make exception for vpns endpoint: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
 }
 
@@ -82,7 +82,7 @@ pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option
 
     let mut config = tun2::Configuration::default();
     config.address(&client_config.client.address)
-        .netmask("0.0.0.0")
+        .netmask("255.255.255.255")
         .destination("10.66.66.1")
         .tun_name("tun0")
         .up();
@@ -113,8 +113,8 @@ pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option
     });
 
     let s_a: SocketAddr = client_config.server.endpoint.parse().unwrap();
-    //#[cfg(target_os = "linux")]
-    //configure_routes(&s_a.ip().to_string(), s_interface);
+    #[cfg(target_os = "linux")]
+    configure_routes(&s_a.ip().to_string(), s_interface);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     
