@@ -4,6 +4,7 @@ use clap::{App, Arg, ArgMatches};
 use env_logger::Builder;
 use log::{error, LevelFilter};
 use crate::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
+use crate::client::{DesktopClient, VpnClient};
 
 mod obfs;
 mod server;
@@ -67,7 +68,9 @@ async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
 
 async fn init_client(cfg_raw: &str, s_interface: Option<&str>) {
     let config: ClientConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad client config file structure");
-    client::client_mode(config, s_interface).await;
+    //client::client_mode(config, s_interface).await;
+    let client = DesktopClient{client_config: config, s_interface};
+    client.start().await;
 }
 
 #[tokio::main]

@@ -1,6 +1,6 @@
 [package]
 name = "frida_vpn"
-version = "0.1.2"
+version = "0.1.5"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["alterdekim"]
@@ -10,10 +10,15 @@ readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib"]
+path = "src/android.rs"
+
 [dependencies]
 clap = "2.33"
 aes-gcm = "0.10.3"
 tokio = { version = "1", features = ["full", "signal", "tracing"] }
+tokio-util = "0.7.12"
 serde = "1.0"
 serde_derive = "1.0.190"
 rand = { version = "0.8.5", features = ["small_rng", "getrandom", "std_rng"] }
@@ -34,4 +39,9 @@ base64 = "0.22.1"
 chrono = "0.4.38"
 console-subscriber = "0.4.0"
 network-interface = "2.0.0"
-socks5-server = "0.10.1"
+
+[target.'cfg(target_os="android")'.dependencies]
+jni = "^0.20"
+robusta_jni = "0.2.2"
+nonblock = "0.2.0"
+log4rs = "1.3.0"
