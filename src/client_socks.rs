@@ -1,29 +1,32 @@
 use crossbeam_channel::unbounded;
 use socket2::SockAddr;
 use tokio::{net::UdpSocket, sync::Mutex};
-use std::{io::{Read, Write}, net::SocketAddr};
+use std::{io::{Read, Write}, net::{SocketAddr, Ipv4Addr, IpAddr}};
 use base64::prelude::*;
 use log::{error, info, warn};
 use std::sync::Arc;
-use std::net::Ipv4Addr;
 use x25519_dalek::{PublicKey, StaticSecret};
 use std::process::Command;
+use std::collections::HashMap;
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce};
 
 use crate::config::ClientConfiguration;
 use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+use network_interface::NetworkInterface;
+use network_interface::NetworkInterfaceConfig;
 
-pub async fn client_mode(client_config: ClientConfiguration) {
+pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option<&str>) {
     info!("Starting client...");
+    info!("s_interface: {:?}", s_interface);
+
+    let proxy_sock = UdpSocket::bind("127.0.0.1:9997").await.unwrap();
+    let proxy_sock_rec = Arc::new(proxy_sock);
+    let proxy_sock_snd = proxy_sock_rec.clone();
 
     let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
     sock.connect(&client_config.server.endpoint).await.unwrap();
-
-    // socks5
-
-    let (mut dev_reader, mut dev_writer) = dev.split();
 
     let sock_rec = Arc::new(sock);
     let sock_snd = sock_rec.clone();
@@ -31,25 +34,29 @@ pub async fn client_mode(client_config: ClientConfiguration) {
     let (tx, rx) = unbounded::<Vec<u8>>();
     let (dx, mx) = unbounded::<Vec<u8>>();
 
+    let addresses = Arc::new(Mutex::new(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)));
+
     let cipher_shared = Arc::new(Mutex::new(None));
 
+    let addresses_snd = addresses.clone();
     tokio::spawn(async move {
         while let Ok(bytes) = rx.recv() {
             //info!("Write to tun {:?}", hex::encode(&bytes));
-            dev_writer.write_all(&bytes).unwrap();
+            let al = addresses_snd.lock().await;
+            proxy_sock_snd.send_to(&bytes, al.clone()).await;
+            drop(al);
         }
     });
 
+    let addresses_rec = addresses.clone();
     tokio::spawn(async move {
         let mut buf = vec![0; 8192];
-        while let Ok(n) = dev_reader.read(&mut buf) {
-            dx.send(buf[..n].to_vec()).unwrap();
+        while let Ok((len, addr)) = proxy_sock_rec.recv_from(&mut buf).await {
+            let mut al = addresses_rec.lock().await;
+            *al = addr;
+            dx.send(buf[..len].to_vec()).unwrap();
         }
     });
-
-    let s_a: SocketAddr = client_config.server.endpoint.parse().unwrap();
-    #[cfg(target_os = "linux")]
-    configure_routes(&s_a.ip().to_string(), s_interface);
 
     let priv_key = BASE64_STANDARD.decode(client_config.client.private_key).unwrap();
     
