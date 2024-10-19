@@ -46,7 +46,7 @@ pub mod general {
         }
     }
 
-    struct FdReader {
+    pub struct FdReader {
         br: File
     }
 
@@ -78,7 +78,7 @@ pub mod general {
         }
     }
     
-    struct FdWriter {
+    pub struct FdWriter {
         br: File
     }
 
@@ -308,7 +308,7 @@ pub mod general {
 
 pub mod android {
     #![cfg(target_os = "android")]
-    use crate::client::general::{VpnClient, CoreVpnClient};
+    use crate::client::general::{VpnClient, CoreVpnClient, FdReader, FdWriter};
     use crate::config::ClientConfiguration;
     use tokio_util::sync::CancellationToken;
     use std::os::fd::FromRawFd;
