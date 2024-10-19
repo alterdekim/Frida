@@ -47,7 +47,7 @@ pub mod general {
     }
 
     pub struct FdReader {
-        br: File
+        pub br: File
     }
 
     impl ReadWrapper for FdReader {
@@ -79,7 +79,7 @@ pub mod general {
     }
     
     pub struct FdWriter {
-        br: File
+        pub br: File
     }
 
     impl WriteWrapper for FdWriter {
@@ -316,9 +316,9 @@ pub mod android {
     use log::{error, info, warn};
 
     pub struct AndroidClient {
-        client_config: ClientConfiguration,
-        fd: i32,
-        close_token: CancellationToken
+        pub client_config: ClientConfiguration,
+        pub fd: i32,
+        pub close_token: CancellationToken
     }
     
     impl VpnClient for AndroidClient {
