@@ -426,7 +426,7 @@ pub mod desktop {
             let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
 
             #[cfg(target_os = "linux")]
-            configure_routes(&s_a.ip().to_string(), s_interface);
+            configure_routes(&s_a.ip().to_string(), self.s_interface);
 
             
             client.start(sock).await;
