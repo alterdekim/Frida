@@ -29,6 +29,7 @@ mod jni {
     use robusta_jni::jni::JNIEnv;
     use crate::config::ClientConfiguration;
     use crate::client::android::AndroidClient;
+    use crate::client::general::VpnClient;
     use crate::TUN_QUIT;
     use std::fs::File;
 
