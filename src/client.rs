@@ -103,15 +103,11 @@ pub mod general {
     }
 
     impl<T: ReadWrapper + std::marker::Sync, R: WriteWrapper + std::marker::Sync> CoreVpnClient<T, R> {
-         pub async fn start(&mut self) {
+         pub async fn start(&mut self, sock: UdpSocket) {
             info!("Starting client...");
     
             let dr_cancel: CancellationToken = CancellationToken::new();
             let sr_cancel: CancellationToken = CancellationToken::new();
-            
-            info!("SSS: {:?}", &self.client_config.server.endpoint);
-            let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
-            sock.connect(&self.client_config.server.endpoint).await.unwrap();
         
             let sock_rec = Arc::new(sock);
             let sock_snd = sock_rec.clone();
@@ -332,7 +328,10 @@ pub mod android {
             let mut dev_reader = BufReader::new(dev);
             let mut dev_writer = BufWriter::new(dev1);
             let client = CoreVpnClient{client_config: self.client_config, dev_reader, dev_writer, close_token: self.close_token};
-            client.start().await;
+            info!("SSS: {:?}", &self.client_config.server.endpoint);
+            let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
+            sock.connect(&self.client_config.server.endpoint).await.unwrap();
+            client.start(sock).await;
         }
     }
 }
@@ -342,7 +341,7 @@ pub mod desktop {
     use crate::config::ClientConfiguration;
     use log::{error, info, warn};
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
-    use tokio::io::BufReader;
+    use tokio::{io::BufReader, net::UdpSocket};
     use std::process::Command;
     use std::{io::{Read, Write}, net::SocketAddr};
 
@@ -417,6 +416,10 @@ pub mod desktop {
                 .tun_name("tun0")
                 .up();
         
+            info!("SSS: {:?}", &self.client_config.server.endpoint);
+            let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
+            sock.connect(&self.client_config.server.endpoint).await.unwrap();
+            
             let dev = tun2::create_as_async(&config).unwrap();
             let (mut dev_writer, mut dev_reader) = dev.split().unwrap();
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
@@ -425,7 +428,8 @@ pub mod desktop {
             #[cfg(target_os = "linux")]
             configure_routes(&s_a.ip().to_string(), s_interface);
 
-            client.start().await;
+            
+            client.start(sock).await;
         }
     }
 }
