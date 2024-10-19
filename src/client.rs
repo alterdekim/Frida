@@ -311,9 +311,8 @@ pub mod android {
     use crate::client::general::{VpnClient, CoreVpnClient};
     use crate::config::ClientConfiguration;
     use tokio_util::sync::CancellationToken;
-    use std::fs::File;
     use std::os::fd::FromRawFd;
-    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt}};
+    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt}, fs::File};
     use log::{error, info, warn};
 
     pub struct AndroidClient {
