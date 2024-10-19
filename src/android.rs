@@ -11,7 +11,6 @@ use std::io::Write;
 mod config;
 mod client;
 mod udp;
-mod mobile;
 
 static TUN_QUIT: std::sync::Mutex<Option<tokio_util::sync::CancellationToken>> = std::sync::Mutex::new(None);
 
@@ -28,7 +27,7 @@ mod jni {
     use robusta_jni::jni::errors::Result as JniResult;
     use robusta_jni::jni::objects::AutoLocal;
     use robusta_jni::jni::JNIEnv;
-    use crate::mobile;
+    use crate::config::ClientConfiguration;
     use crate::TUN_QUIT;
     use std::fs::File;
 
