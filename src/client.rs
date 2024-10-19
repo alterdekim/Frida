@@ -326,7 +326,7 @@ pub mod android {
             info!("FD: {:?}", &self.fd);
             let mut dev = unsafe { File::from_raw_fd(self.fd) };
             let mut dev1 = unsafe { File::from_raw_fd(self.fd) };
-            let client = CoreVpnClient{client_config: self.client_config, FdReader{br: dev}, FdWriter{br: dev1}, close_token: self.close_token};
+            let client = CoreVpnClient{client_config: self.client_config, dev_reader: FdReader{br: dev}, dev_writer: FdWriter{br: dev1}, close_token: self.close_token};
             info!("SSS: {:?}", &self.client_config.server.endpoint);
             let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
