@@ -6,7 +6,7 @@ use x25519_dalek::{StaticSecret, PublicKey};
 use rand::{rngs::StdRng, SeedableRng};
 use base64::prelude::*;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ServerInterface {
     pub bind_address: String,
     pub internal_address: String,
@@ -22,7 +22,7 @@ pub struct ServerPeer {
     pub ip: Ipv4Addr
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub enum ObfsProtocol {
     FakeDNS,
     VEIL,
@@ -30,12 +30,12 @@ pub enum ObfsProtocol {
     NONE
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ObfsConfig {
     protocol: ObfsProtocol
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ServerConfiguration {
     pub interface: ServerInterface,
     pub peers: Vec<ServerPeer>,
@@ -62,34 +62,34 @@ impl ServerConfiguration {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct DNSConfig {
     enabled: bool,
     net_name: String,
     entries: Vec<DNSEntry>
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct DNSEntry {
     ip: Ipv4Addr,
     subdomain: String
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ClientInterface {
     pub private_key: String,
     pub public_key: String,
     pub address: String
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct EndpointInterface {
     pub public_key: String,
     pub endpoint: String,
     pub keepalive: u8
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ClientConfiguration {
     pub client: ClientInterface,
     pub server: EndpointInterface

@@ -1,85 +1,5 @@
 use crossbeam_channel::unbounded;
 use socket2::SockAddr;
-use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt}, fs::File};
-use tokio_util::sync::CancellationToken;
-use std::{io::{Read, Write}, net::SocketAddr};
-use base64::prelude::*;
-use log::{error, info, warn};
-use std::sync::Arc;
-use std::net::Ipv4Addr;
-use x25519_dalek::{PublicKey, StaticSecret};
-use std::{ process::Command, os::unix::io::FromRawFd};
-use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-    Aes256Gcm, Nonce};
-
-use crate::config::ClientConfiguration;
-use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-use network_interface::NetworkInterface;
-use network_interface::NetworkInterfaceConfig;
-
-fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
-    let interfaces = NetworkInterface::show().unwrap();
-
-    let net_inter = interfaces.iter()
-        .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
-        .min_by(|x, y| x.index.cmp(&y.index))
-        .unwrap();
-
-    let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { net_inter.name };
-
-    info!("Main network interface: {:?}", inter_name);
-
-    /*let mut ip_output = Command::new("sudo")
-        .arg("ip")
-        .arg("route")
-        .arg("del")
-        .arg("default")
-        .output()
-        .expect("Failed to delete default gateway.");
-
-    if !ip_output.status.success() {
-        error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
-    }*/
-
-    let mut ip_output = Command::new("sudo")
-        .arg("ip")
-        .arg("-4")
-        .arg("route")
-        .arg("add")
-        .arg("0.0.0.0/0")
-        .arg("dev")
-        .arg("tun0")
-        .output()
-        .expect("Failed to execute ip route command.");
-
-    if !ip_output.status.success() {
-        error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
-    }
-
-    ip_output = Command::new("sudo")
-        .arg("ip")
-        .arg("route")
-        .arg("add")
-        .arg(endpoint_ip.to_owned()+"/32")
-        .arg("via")
-        .arg("192.168.0.1")
-        .arg("dev")
-        .arg(inter_name)
-        .output()
-        .expect("Failed to make exception for vpns endpoint.");
-
-    if !ip_output.status.success() {
-        error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
-    }
-}
-
-/*
-s_interface: Option<&str>
-let s_a: SocketAddr = client_config.server.endpoint.parse().unwrap();
-#[cfg(target_os = "linux")]
-configure_routes(&s_a.ip().to_string(), s_interface);
-*/
 
 /*
 What the fuck I want to implement?
@@ -91,83 +11,250 @@ Both of child classes should trigger the same "core vpn client" module
 
 */
 
-pub struct AndroidClient {
-    client_config: ClientConfiguration,
-    fd: i32,
-    close_token: CancellationToken
-}
+pub mod general {
+    use crate::config::ClientConfiguration;
+    use tokio_util::sync::CancellationToken;
+    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt, AsyncRead, AsyncWrite}, fs::File};
+    use log::{error, info, warn};
+    use aes_gcm::{
+        aead::{Aead, AeadCore, KeyInit, OsRng},
+        Aes256Gcm, Nonce};
+    use base64::prelude::*;
+    use std::{fmt::Error, io::Read, pin, sync::Arc};
+    use std::net::Ipv4Addr;
+    use std::pin::pin;
+    use x25519_dalek::{PublicKey, StaticSecret};
+    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+    use tun2::{platform::Device, Configuration, DeviceReader, DeviceWriter};
 
-pub struct DesktopClient {
-    client_config: ClientConfiguration,
-    s_interface: Option<String>
-}
-
-impl VpnClient for AndroidClient {
-    async fn start(&self) {
-        info!("FD: {:?}", &self.fd);
-        let mut dev = unsafe { File::from_raw_fd(self.fd) };
-        let mut dev1 = unsafe { File::from_raw_fd(self.fd) };
-        let mut dev_reader = BufReader::new(dev);
-        let mut dev_writer = BufWriter::new(dev1);
-        let client = CoreVpnClient{client_config: self.client_config, dev_reader, dev_writer, close_token: self.close_token};
-        client.start().await;
+    trait ReadWrapper {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
     }
-}
 
-impl VpnClient for DesktopClient {
-    async fn start(&self) {
-        info!("s_interface: {:?}", &self.s_interface);
-        let mut config = tun2::Configuration::default();
-        config.address(&self.client_config.client.address)
-            .netmask("255.255.255.255")
-            .destination("10.66.66.1")
-            .tun_name("tun0")
-            .up();
-    
-        let dev = tun2::create(&config).unwrap();
-        let (mut dev_reader, mut dev_writer) = dev.split();
-        let client = CoreVpnClient{ client_config: self.client_config, dev_reader, dev_writer, close_token: tokio_util::sync::CancellationToken::new()};
-        client.start().await;
+    pub struct DevReader {
+        pub dr: DeviceReader
     }
-}
 
-pub trait VpnClient {
-    async fn start(&self);
-}
+    // TODO: implement custom Error
+    impl ReadWrapper for DevReader {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+            let r = self.dr.read(buf).await;
+            if let Ok(a) = r {
+                return Ok(a);
+            }
+            Err(())
+        }
+    }
 
-struct CoreVpnClient {
-    client_config: ClientConfiguration,
-    dev_reader: Reader,
-    dev_writer: Writer,
-    close_token: CancellationToken
-}
+    struct FdReader {
+        br: File
+    }
 
-impl CoreVpnClient {
-    pub async fn start(&self) {
-        info!("Starting client...");
+    impl ReadWrapper for FdReader {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+            let r = self.br.read(buf).await;
+            if let Ok(a) = r {
+                return Ok(a);
+            }
+            Err(())
+        }
+    }
 
-        let dr_cancel: CancellationToken = CancellationToken::new();
-        let sr_cancel: CancellationToken = CancellationToken::new();
+    trait WriteWrapper {
+        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()>;
+    }
+
+    pub struct DevWriter {
+        pub dr: DeviceWriter
+    }
+
+    // TODO: implement custom Error
+    impl WriteWrapper for DevWriter {
+        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+            if let Ok(a) = self.dr.write(buf).await {
+                return Ok(a);
+            }
+            Err(())
+        }
+    }
     
-        let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
-        sock.connect(&self.client_config.server.endpoint).await.unwrap();
+    struct FdWriter {
+        br: File
+    }
+
+    impl WriteWrapper for FdWriter {
+        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+            if let Ok(a) = self.br.write(buf).await {
+                return Ok(a);
+            }
+            Err(())
+        }
+    }
+
+    pub trait VpnClient {
+        async fn start(&self);
+    }
     
-        let sock_rec = Arc::new(sock);
-        let sock_snd = sock_rec.clone();
+    pub struct CoreVpnClient<T, R> where T: ReadWrapper, R: WriteWrapper {
+        pub client_config: ClientConfiguration,
+        pub dev_reader: T,
+        pub dev_writer: R,
+        pub close_token: CancellationToken
+    }
+
+    impl<T: ReadWrapper + std::marker::Sync, R: WriteWrapper + std::marker::Sync> CoreVpnClient<T, R> {
+         pub async fn start(&mut self) {
+            info!("Starting client...");
     
-        let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
-        let (dx, mut mx) = mpsc::unbounded_channel::<Vec<u8>>();
+            let dr_cancel: CancellationToken = CancellationToken::new();
+            let sr_cancel: CancellationToken = CancellationToken::new();
+            
+            info!("SSS: {:?}", &self.client_config.server.endpoint);
+            let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
+            sock.connect(&self.client_config.server.endpoint).await.unwrap();
+        
+            let sock_rec = Arc::new(sock);
+            let sock_snd = sock_rec.clone();
+        
+            let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
+            let (dx, mut mx) = mpsc::unbounded_channel::<Vec<u8>>();
+        
+            let cipher_shared: Arc<Mutex<Option<x25519_dalek::SharedSecret>>> = Arc::new(Mutex::new(None));
+        
+           /* let dr_cc = dr_cancel.clone();
+            let dev_read_task = tokio::spawn(async move {
+                let mut buf = vec![0; 1400]; // mtu
+                loop {
+                    tokio::select! {
+                        _ = dr_cc.cancelled() => {
+                            info!("Cancellation token has been thrown dev_read_task");
+                            return;
+                        }
+                        rr = self.dev_reader.read(&mut buf) => {
+                            if let Ok(n) = rr {
+                                info!("Read from tun."); // hex::encode(&buf[..n])
+                                dx.send(buf[..n].to_vec()).unwrap();
+                            }
+                        }
+                    };
+                }
+            });*/
+        
+            let priv_key = BASE64_STANDARD.decode(&self.client_config.client.private_key).unwrap();
+            
+            let cipher_shared_clone = cipher_shared.clone();
+            let sr_cc = sr_cancel.clone();
+         /* let sock_read_task = tokio::spawn(async move {
+                let mut buf = vec![0; 4096];
+        
+                loop {
+                    tokio::select! {
+                        _ = sr_cc.cancelled() => {
+                            info!("Cancellation token has been thrown sock_read_task");
+                            return;
+                        }
+                        rr = sock_rec.recv(&mut buf) => {
+                            if let Ok(l) = rr {
+                                info!("Read from socket");
+                                let mut s_cipher = cipher_shared_clone.lock().await;
+                                match buf.first() {
+                                    Some(h) => {
+                                        match h {
+                                            0 => {
+                                                let handshake = UDPVpnHandshake::deserialize(&(buf[..l].to_vec()));
+                                                let mut k = [0u8; 32];
+                                                for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {
+                                                    *p = x;
+                                                }
+                                                let mut k1 = [0u8; 32];
+                                                for (&x, p) in priv_key.iter().zip(k1.iter_mut()) {
+                                                    *p = x;
+                                                }
+                                                *s_cipher = Some(StaticSecret::from(k1)
+                                                    .diffie_hellman(&PublicKey::from(k)));
+                                            }, // handshake
+                                            1 => {
+                                                let wrapped_packet = UDPVpnPacket::deserialize(&(buf[..l].to_vec()));
+                                                if s_cipher.is_some() {
+                                                    let aes = Aes256Gcm::new(s_cipher.as_ref().unwrap().as_bytes().into());
+                                                    let nonce = Nonce::clone_from_slice(&wrapped_packet.nonce);
+                                                    match aes.decrypt(&nonce, &wrapped_packet.data[..]) {
+                                                        Ok(decrypted) => { let _ = tx.send(decrypted); },
+                                                        Err(error) => { error!("Decryption error! {:?}", error); }
+                                                    }
+                                                } else {
+                                                    warn!("There is no static_secret");
+                                                }
+                                            }, // payload
+                                            2 => { info!("Got keepalive packet"); },
+                                            _ => { error!("Unexpected header value."); }
+                                        }
+                                    },
+                                    None => { error!("There is no header."); }
+                                }
+                                drop(s_cipher);
+                            }
+                        }
+                    };
+                }
+            });*/
+        
+            let pkey = BASE64_STANDARD.decode(&self.client_config.client.public_key).unwrap();
+            let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
+            let mut nz = 0;
+            while nz < 25 {
+                sock_snd.send(&handshake.serialize()).await.unwrap();
+                nz += 1
+            }
+            //sock_snd.send(&handshake.serialize()).await.unwrap();
+        
+            let s_cipher = cipher_shared.clone();
     
-        let cipher_shared: Arc<Mutex<Option<x25519_dalek::SharedSecret>>> = Arc::new(Mutex::new(None));
+            self.dev_writer.write(&handshake.serialize()).await;
     
-        let dr_cc = dr_cancel.clone();
-        let dev_read_task = tokio::spawn(async move {
             let mut buf = vec![0; 1400]; // mtu
+            let mut buf1 = vec![0; 4096];
+
             loop {
                 tokio::select! {
-                    _ = dr_cc.cancelled() => {
-                        info!("Cancellation token has been thrown dev_read_task");
+                    _ = self.close_token.cancelled() => {
+                        info!("Cancellation token has been thrown");
+                        sr_cancel.cancel();
+                        dr_cancel.cancel();
                         return;
+                    }
+                    rr = rx.recv() => {
+                        if let Some(bytes) = rr {
+                            info!("Write to tun.");
+                            if let Err(e) = self.dev_writer.write(&bytes).await {
+                                error!("Writing error: {:?}", e);
+                            }
+                           /* if let Err(e) = self.dev_writer.flush().await {
+                                error!("Flushing error: {:?}", e);
+                            }*/
+                        }
+                    }
+                    rr2 = mx.recv() => {
+                        if let Some(bytes) = rr2 {
+                            let s_c = s_cipher.lock().await;
+                            
+                            if s_c.is_some() {
+                                let aes = Aes256Gcm::new(s_c.as_ref().unwrap().as_bytes().into());
+                                let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+                                let ciphered_data = aes.encrypt(&nonce, &bytes[..]);
+                                
+                                if let Ok(ciphered_d) = ciphered_data {
+                                    let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
+                                    let serialized_data = vpn_packet.serialize();
+                                    info!("Write to socket");
+                                    sock_snd.send(&serialized_data).await.unwrap();
+                                } else {
+                                    error!("Socket encryption failed.");
+                                }
+                            } else {
+                                error!("There is no shared_secret in main loop");
+                            }
+                        }
                     }
                     rr = self.dev_reader.read(&mut buf) => {
                         if let Ok(n) = rr {
@@ -175,32 +262,15 @@ impl CoreVpnClient {
                             dx.send(buf[..n].to_vec()).unwrap();
                         }
                     }
-                };
-            }
-        });
-    
-        let priv_key = BASE64_STANDARD.decode(self.client_config.client.private_key).unwrap();
-        
-        let cipher_shared_clone = cipher_shared.clone();
-        let sr_cc = sr_cancel.clone();
-        let sock_read_task = tokio::spawn(async move {
-            let mut buf = vec![0; 4096];
-    
-            loop {
-                tokio::select! {
-                    _ = sr_cc.cancelled() => {
-                        info!("Cancellation token has been thrown sock_read_task");
-                        return;
-                    }
-                    rr = sock_rec.recv(&mut buf) => {
+                    rr = sock_rec.recv(&mut buf1) => {
                         if let Ok(l) = rr {
                             info!("Read from socket");
                             let mut s_cipher = cipher_shared_clone.lock().await;
-                            match buf.first() {
+                            match buf1.first() {
                                 Some(h) => {
                                     match h {
                                         0 => {
-                                            let handshake = UDPVpnHandshake::deserialize(&(buf[..l].to_vec()));
+                                            let handshake = UDPVpnHandshake::deserialize(&(buf1[..l].to_vec()));
                                             let mut k = [0u8; 32];
                                             for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {
                                                 *p = x;
@@ -213,7 +283,7 @@ impl CoreVpnClient {
                                                 .diffie_hellman(&PublicKey::from(k)));
                                         }, // handshake
                                         1 => {
-                                            let wrapped_packet = UDPVpnPacket::deserialize(&(buf[..l].to_vec()));
+                                            let wrapped_packet = UDPVpnPacket::deserialize(&(buf1[..l].to_vec()));
                                             if s_cipher.is_some() {
                                                 let aes = Aes256Gcm::new(s_cipher.as_ref().unwrap().as_bytes().into());
                                                 let nonce = Nonce::clone_from_slice(&wrapped_packet.nonce);
@@ -236,63 +306,130 @@ impl CoreVpnClient {
                     }
                 };
             }
-        });
-    
-        let pkey = BASE64_STANDARD.decode(self.client_config.client.public_key).unwrap();
-        let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
-        let mut nz = 0;
-        while nz < 25 {
-            sock_snd.send(&handshake.serialize()).await.unwrap();
-            nz += 1
-        }
-        //sock_snd.send(&handshake.serialize()).await.unwrap();
-    
-        let s_cipher = cipher_shared.clone();
-        loop {
-            tokio::select! {
-                _ = self.close_token.cancelled() => {
-                    info!("Cancellation token has been thrown");
-                    sr_cancel.cancel();
-                    dr_cancel.cancel();
-                    return;
-                }
-                rr = rx.recv() => {
-                    if let Some(bytes) = rr {
-                        info!("Write to tun.");
-                        if let Err(e) = self.dev_writer.write_all(&bytes).await {
-                            error!("Writing error: {:?}", e);
-                        }
-                        if let Err(e) = self.dev_writer.flush().await {
-                            error!("Flushing error: {:?}", e);
-                        }
-                    }
-                }
-                rr2 = mx.recv() => {
-                    if let Some(bytes) = rr2 {
-                        let s_c = s_cipher.lock().await;
-                        
-                        if s_c.is_some() {
-                            let aes = Aes256Gcm::new(s_c.as_ref().unwrap().as_bytes().into());
-                            let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-                            let ciphered_data = aes.encrypt(&nonce, &bytes[..]);
-                            
-                            if let Ok(ciphered_d) = ciphered_data {
-                                let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                                let serialized_data = vpn_packet.serialize();
-                                info!("Write to socket");
-                                sock_snd.send(&serialized_data).await.unwrap();
-                            } else {
-                                error!("Socket encryption failed.");
-                            }
-                        } else {
-                            error!("There is no shared_secret in main loop");
-                        }
-                    }
-                }
-            };
         }
     }
 }
+
+pub mod android {
+    #![cfg(target_os = "android")]
+    use crate::client::general::{VpnClient, CoreVpnClient};
+    use crate::config::ClientConfiguration;
+    use tokio_util::sync::CancellationToken;
+    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt}, fs::File};
+    use log::{error, info, warn};
+
+    pub struct AndroidClient {
+        client_config: ClientConfiguration,
+        fd: i32,
+        close_token: CancellationToken
+    }
+    
+    impl VpnClient for AndroidClient {
+        async fn start(&self) {
+            info!("FD: {:?}", &self.fd);
+            let mut dev = unsafe { File::from_raw_fd(self.fd) };
+            let mut dev1 = unsafe { File::from_raw_fd(self.fd) };
+            let mut dev_reader = BufReader::new(dev);
+            let mut dev_writer = BufWriter::new(dev1);
+            let client = CoreVpnClient{client_config: self.client_config, dev_reader, dev_writer, close_token: self.close_token};
+            client.start().await;
+        }
+    }
+}
+
+pub mod desktop {
+    use crate::client::general::{CoreVpnClient, DevReader, DevWriter, VpnClient};
+    use crate::config::ClientConfiguration;
+    use log::{error, info, warn};
+    use network_interface::{NetworkInterface, NetworkInterfaceConfig};
+    use tokio::io::BufReader;
+    use std::process::Command;
+    use std::{io::{Read, Write}, net::SocketAddr};
+
+    fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
+        let interfaces = NetworkInterface::show().unwrap();
+    
+        let net_inter = interfaces.iter()
+            .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
+            .min_by(|x, y| x.index.cmp(&y.index))
+            .unwrap();
+    
+        let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { net_inter.name.clone() };
+    
+        info!("Main network interface: {:?}", inter_name);
+    
+        /*let mut ip_output = Command::new("sudo")
+            .arg("ip")
+            .arg("route")
+            .arg("del")
+            .arg("default")
+            .output()
+            .expect("Failed to delete default gateway.");
+    
+        if !ip_output.status.success() {
+            error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        }*/
+    
+        let mut ip_output = Command::new("sudo")
+            .arg("ip")
+            .arg("-4")
+            .arg("route")
+            .arg("add")
+            .arg("0.0.0.0/0")
+            .arg("dev")
+            .arg("tun0")
+            .output()
+            .expect("Failed to execute ip route command.");
+    
+        if !ip_output.status.success() {
+            error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        }
+    
+        ip_output = Command::new("sudo")
+            .arg("ip")
+            .arg("route")
+            .arg("add")
+            .arg(endpoint_ip.to_owned()+"/32")
+            .arg("via")
+            .arg("192.168.0.1")
+            .arg("dev")
+            .arg(inter_name)
+            .output()
+            .expect("Failed to make exception for vpns endpoint.");
+    
+        if !ip_output.status.success() {
+            error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        }
+    }
+
+    pub struct DesktopClient {
+        pub client_config: ClientConfiguration,
+        pub s_interface: Option<String>
+    }
+    
+    impl VpnClient for DesktopClient {
+        async fn start(&self) {
+            info!("s_interface: {:?}", &self.s_interface);
+            let mut config = tun2::Configuration::default();
+            config.address(&self.client_config.client.address)
+                .netmask("255.255.255.255")
+                .destination("10.66.66.1")
+                .tun_name("tun0")
+                .up();
+        
+            let dev = tun2::create_as_async(&config).unwrap();
+            let (mut dev_writer, mut dev_reader) = dev.split().unwrap();
+            let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
+            let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
+
+            #[cfg(target_os = "linux")]
+            configure_routes(&s_a.ip().to_string(), s_interface);
+
+            client.start().await;
+        }
+    }
+}
+
 
 /*pub async fn client_mode(client_config: ClientConfiguration, s_interface: Option<&str>) {
     info!("Starting client...");
