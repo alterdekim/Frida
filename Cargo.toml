@@ -14,6 +14,15 @@ readme = "README.md"
 crate-type = ["cdylib"]
 path = "src/android.rs"
 
+[[bin]]
+name = "frida-cli"
+path = "src/main.rs"
+
+[[bin]]
+name = "frida-gui"
+path = "src/gui.rs"
+
+
 [dependencies]
 clap = "2.33"
 aes-gcm = "0.10.3"
@@ -39,6 +48,10 @@ base64 = "0.22.1"
 chrono = "0.4.38"
 console-subscriber = "0.4.0"
 network-interface = "2.0.0"
+
+[target.'cfg(target_os="windows")'.dependencies]
+eframe = { version = "0.29.1", features = ["wgpu"] }
+egui_extras = { version = "0.29.1", features = ["all_loaders"] }
 
 [target.'cfg(target_os="android")'.dependencies]
 jni = "^0.20"
