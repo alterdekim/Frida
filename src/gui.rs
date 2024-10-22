@@ -15,16 +15,20 @@ use env_logger::Builder;
 mod toggle_switch;
 mod config;
 
+fn get_configs_dir() -> PathBuf {
+    let mut p = dirs::home_dir().unwrap();
+    p.push(".frida");
+    p
+}
+
 fn main() -> eframe::Result {
-    egui_logger::builder().init().unwrap();
+    egui_logger::builder().max_level(LevelFilter::Error).init().unwrap();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
     };
-    let mut hh = dirs::home_dir().unwrap();
-    hh.push(".frida");
-    let cfgs = std::fs::read_dir(hh).unwrap();
+    let cfgs = std::fs::read_dir(get_configs_dir()).unwrap();
     let mut cv = Vec::new();
     for path in cfgs {
         cv.push(path.unwrap().path());
@@ -209,26 +213,23 @@ impl Configs {
                     if let Some(dialog) = &mut self.open_config_dialog {
                         if dialog.show(ctx).selected() {
                             if let Some(file) = dialog.path() {
-                                if let Some(home) = dirs::home_dir() {
-                                    let mut h = home.clone();
-                                    h.push(".frida");
-                                    std::fs::create_dir_all(&h);
-                                    h.push(file.file_name().unwrap());
-                                    std::fs::copy(file, &h);
-
-                                    self.cfgs.push(h);
-                                }
+                                let mut h = get_configs_dir();
+                                std::fs::create_dir_all(&h);
+                                h.push(file.file_name().unwrap());
+                                std::fs::copy(file, &h);
+                                self.cfgs.push(h);
                             }
                         }
                     }
 
                     if ui.button("Remove selected").clicked() {
-                        let path = &self.selected_cfg.as_ref().unwrap().1;
+                        if self.selected_cfg.is_none() { return; }
+                        let mut fp = get_configs_dir();
+                        fp.push(&self.selected_cfg.as_ref().unwrap().1);
+                        let path = &fp.to_str().unwrap().to_string();
                         if let Ok(r) = std::fs::remove_file(path) {
-                            error!("FUCK");
                             for i in 0..self.cfgs.len() {
-                                error!("AA {:?}", path);
-                                if path == self.cfgs[i].file_name().unwrap().to_str().unwrap() {
+                                if &self.selected_cfg.as_ref().unwrap().1 == self.cfgs[i].file_name().unwrap().to_str().unwrap() {
                                     self.cfgs.remove(i);
                                     break;
                                 }
