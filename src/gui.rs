@@ -4,13 +4,15 @@ use eframe::egui::{self, Context, Frame, Label, ScrollArea, Spacing, Vec2};
 use egui_file::FileDialog;
 use std::{
     ffi::OsStr,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, sync::mpsc::SyncSender,
   };
+use std::sync::mpsc;
 use egui_extras::{Column, TableBuilder};
 use log::{info, error};
 use crate::config::ClientConfiguration;
 use log::LevelFilter;
 use env_logger::Builder;
+use tray_item::{IconSource, TrayItem};
 
 mod toggle_switch;
 mod config;
@@ -21,11 +23,42 @@ fn get_configs_dir() -> PathBuf {
     p
 }
 
-fn main() -> eframe::Result {
+enum Message {
+    Open,
+    Buzz
+}
+
+fn main() {
     egui_logger::builder().max_level(LevelFilter::Error).init().unwrap();
 
+    let mut tray = TrayItem::new(
+        "Frida VPN",
+        IconSource::Resource("tray-default"),
+    )
+    .unwrap();
+
+    let (tx, rx) = mpsc::sync_channel(1);
+
+    let tx_m = tx.clone();
+    tray.add_menu_item("Open", move || {
+        tx_m.send(Message::Open).unwrap();
+    })
+    .unwrap();
+
+    loop {
+        match rx.recv() {
+            Ok(Message::Open) => {
+                main_gui();
+            }
+            _ => {}
+        }
+    }
+}
+
+fn main_gui() {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
+        run_and_return: false,
         ..Default::default()
     };
     let cfgs = std::fs::read_dir(get_configs_dir()).unwrap();
@@ -33,13 +66,15 @@ fn main() -> eframe::Result {
     for path in cfgs {
         cv.push(path.unwrap().path());
     }
+    
     eframe::run_native(
         "Frida",
         options,
         Box::new(|cc| {
             Ok(Box::new(App::new(cv)))
         }),
-    )
+    );
+    
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -53,6 +88,7 @@ struct App {
     screen: AppScreens,
     configs: Configs,
     logs: Logs,
+    close: bool
 }
 
 impl App {
@@ -60,13 +96,22 @@ impl App {
         Self {
             screen: AppScreens::Configs,
             configs: Configs::new(cfgs),
-            logs: Logs::default()
+            logs: Logs::default(),
+            close: false
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+
+        if self.close {
+            let ctx = ctx.clone();
+            std::thread::spawn(move || {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            });
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.screen, AppScreens::Configs, "Configs");
@@ -82,6 +127,10 @@ impl eframe::App for App {
                 }
             }
         });
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.close = true;
     }
 }
 

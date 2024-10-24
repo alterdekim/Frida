@@ -1,0 +1,3 @@
+cfg-active ICON "icons/on.ico"
+cfg-inactive ICON "icons/off.ico"
+tray-default ICON "icons/off.ico"
