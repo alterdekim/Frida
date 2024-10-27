@@ -14,7 +14,7 @@ use log::{info, error};
 use log::LevelFilter;
 use env_logger::Builder;
 use tray_item::{IconSource, TrayItem};
-use iced::{widget::container, Element, Task as Command};
+use iced::{widget::container, window, Element, Settings, Task as Command};
 use iced::widget::{button, column, pick_list, radio, text, Column, Container, scrollable};
 
 use crate::tab_button::TabButton;
@@ -30,17 +30,7 @@ fn get_configs_dir() -> PathBuf {
 #[derive(Debug, Clone)]
 pub enum Message {
     ButtonPressed(u8),
-    ButtonReleased
-}
-
-
-
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Filter {
-    All,
-    Something
+    ChangeUI
 }
 
 
@@ -60,6 +50,10 @@ enum App {
 }
 
 impl App {
+    pub fn new() -> (Self, Command<Message>) {
+        (Self::Preloaded, Command::done(Message::ChangeUI))
+    }
+
     pub fn view(&self) -> Element<Message> {
         match self {
             App::Preloaded => {
@@ -71,30 +65,24 @@ impl App {
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Command<Message> {
         match self {
             App::Preloaded => {
-                info!("LOOL");
                 let mut panel = TabPanel::new();
                 panel.push_tab(TabButton::new("First", 0), Tab::new());
                 *self = App::Loaded(State { tab_panel: panel });
+                return Command::done(Message::ChangeUI);
             }
             App::Loaded(state) => {
-                info!("cry");
                 state.tab_panel.update(message);
             }
         }
-    }
-}
-
-impl std::default::Default for App {
-    fn default() -> Self {
-        Self::Preloaded
+        Command::none()
     }
 }
 
 fn main() -> iced::Result {
     iced::application("title", App::update, App::view)
         .window_size((640.0, 480.0))
-        .run()
+        .run_with(App::new)
 }
