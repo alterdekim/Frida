@@ -1,10 +1,10 @@
-use std::{net::{Ipv4Addr}, str};
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
+use base64::prelude::*;
+use std::{net::{Ipv4Addr}, str};
+use rand::{rngs::StdRng, SeedableRng};
 use std::str::FromStr;
 use x25519_dalek::{StaticSecret, PublicKey};
-use rand::{rngs::StdRng, SeedableRng};
-use base64::prelude::*;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct ServerInterface {
