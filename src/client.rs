@@ -343,7 +343,7 @@ pub mod desktop {
                 .up();
         
             info!("SSS: {:?}", &self.client_config.server.endpoint);
-            let sock = UdpSocket::bind("0.0.0.0:25565").await.unwrap();
+            let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             let dev = tun2::create_as_async(&config).unwrap();

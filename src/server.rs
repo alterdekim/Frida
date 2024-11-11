@@ -150,7 +150,6 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
             let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
             let mp = addrs_cl.lock().await;
             if let Some(peer) = mp.get(&ip) {
-                
                 let aes = Aes256Gcm::new(&peer.shared_secret.into());
                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
