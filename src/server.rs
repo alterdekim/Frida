@@ -7,15 +7,16 @@ use log::{error, info};
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
-use std::process::Command;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
-use network_interface::NetworkInterface;
-use network_interface::NetworkInterfaceConfig;
+
+#[cfg(target_os = "linux")]
+use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
 use crate::config::{ ServerConfiguration, ServerPeer};
 use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
 
+#[cfg(target_os = "linux")]
 fn configure_routes(s_interface: Option<&str>) {
     let interfaces = NetworkInterface::show().unwrap();
 
@@ -81,7 +82,7 @@ fn configure_routes(s_interface: Option<&str>) {
     }
 }
 
-pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
+pub async fn server_mode(server_config: ServerConfiguration, _s_interface: Option<&str>) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
@@ -239,7 +240,8 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
         }
     });
     
-    tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task, alive_task);
+    // should be refactored
+    let _ = tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task, alive_task);
 }
 
 struct UDPeer {

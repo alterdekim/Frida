@@ -8,14 +8,14 @@ pub mod general {
         aead::{Aead, AeadCore, KeyInit, OsRng},
         Aes256Gcm, Nonce};
     use base64::prelude::*;
-    use std::{io::Read, sync::Arc};
+    use std::sync::Arc;
     use std::net::Ipv4Addr;
     
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-    use tun2::{AbstractDevice, DeviceReader, DeviceWriter};
+    use tun2::{DeviceReader, DeviceWriter};
 
-    trait ReadWrapper {
+    pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
     }
 
@@ -48,7 +48,7 @@ pub mod general {
         }
     }
 
-    trait WriteWrapper {
+    pub trait WriteWrapper {
         async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()>;
     }
 
@@ -72,10 +72,8 @@ pub mod general {
                     }
                     Err(())
                 },
-                WriterMessage::Gateway(addr) => {
-                   /* if self.dev.set_destination(addr.into()).is_err() {
-                        return Err(());
-                    }*/
+                // this thing should be abolished later
+                WriterMessage::Gateway(_addr) => {
                     Ok(0)
                 }
             }
@@ -130,7 +128,6 @@ pub mod general {
             let priv_key = BASE64_STANDARD.decode(&self.client_config.client.private_key).unwrap();
             
             let cipher_shared_clone = cipher_shared.clone();
-            let sr_cc = sr_cancel.clone();
         
             let pkey = BASE64_STANDARD.decode(&self.client_config.client.public_key).unwrap();
             let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
@@ -143,7 +140,7 @@ pub mod general {
         
             let s_cipher = cipher_shared.clone();
     
-            self.dev_writer.write(WriterMessage::Plain(handshake.serialize())).await;
+            let _ = self.dev_writer.write(WriterMessage::Plain(handshake.serialize())).await;
     
             let mut buf = vec![0; 1400]; // mtu
             let mut buf1 = vec![0; 4096];
@@ -275,12 +272,13 @@ pub mod android {
 pub mod desktop {
     use crate::client::general::{CoreVpnClient, DevReader, DevWriter, VpnClient};
     use crate::config::ClientConfiguration;
-    use log::{error, info};
-    use network_interface::{NetworkInterface, NetworkInterfaceConfig};
+    use log::info;
     use tokio::net::UdpSocket;
-    use std::process::Command;
-    use std::net::SocketAddr;
+    #[cfg(target_os = "linux")]
+    use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
+
+    #[cfg(target_os = "linux")]
     fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
         let interfaces = NetworkInterface::show().unwrap();
     
@@ -360,11 +358,13 @@ pub mod desktop {
             let dev = tun2::create_as_async(&config).unwrap();
             let (dev_writer, dev_reader) = dev.split().unwrap();
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
-            let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
+           
 
             #[cfg(target_os = "linux")]
-            configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
-
+            {
+                let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
+                configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
+            }
             
             client.start(sock).await;
         }
