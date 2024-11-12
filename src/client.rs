@@ -1,21 +1,19 @@
-use crossbeam_channel::unbounded;
-use socket2::SockAddr;
 
 pub mod general {
     use crate::config::ClientConfiguration;
     use tokio_util::sync::CancellationToken;
-    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt, AsyncRead, AsyncWrite}, fs::File};
+    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{AsyncWriteExt, AsyncReadExt}, fs::File};
     use log::{error, info, warn};
     use aes_gcm::{
         aead::{Aead, AeadCore, KeyInit, OsRng},
         Aes256Gcm, Nonce};
     use base64::prelude::*;
-    use std::{fmt::Error, io::Read, pin, sync::Arc};
+    use std::{io::Read, sync::Arc};
     use std::net::Ipv4Addr;
-    use std::pin::pin;
+    
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-    use tun2::{AbstractDevice, AsyncDevice, Configuration, DeviceReader, DeviceWriter};
+    use tun2::{AbstractDevice, DeviceReader, DeviceWriter};
 
     trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
@@ -277,11 +275,11 @@ pub mod android {
 pub mod desktop {
     use crate::client::general::{CoreVpnClient, DevReader, DevWriter, VpnClient};
     use crate::config::ClientConfiguration;
-    use log::{error, info, warn};
+    use log::{error, info};
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
-    use tokio::{io::BufReader, net::UdpSocket};
+    use tokio::net::UdpSocket;
     use std::process::Command;
-    use std::{io::{Read, Write}, net::SocketAddr};
+    use std::net::SocketAddr;
 
     fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
         let interfaces = NetworkInterface::show().unwrap();

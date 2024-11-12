@@ -1,7 +1,6 @@
 
 use std::net::Ipv4Addr;
 use chrono::{Timelike, Utc};
-use rand::Rng;
 
 pub struct UDPVpnPacket {
     pub nonce: Vec<u8>, // [u8; 12]
