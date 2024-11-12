@@ -24,7 +24,7 @@ pub mod general {
     use std::net::Ipv4Addr;
     use std::pin::pin;
     use x25519_dalek::{PublicKey, StaticSecret};
-    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable, UDPVpnRouterIP};
     use tun2::{platform::Device, Configuration, DeviceReader, DeviceWriter};
 
     trait ReadWrapper {
@@ -219,6 +219,10 @@ pub mod general {
                                             }
                                         }, // payload
                                         2 => { info!("Got keepalive packet"); },
+                                        3 => { 
+                                            let router_packet = UDPVpnRouterIP::deserialize(&(buf1[..l].to_vec()));
+                                            // todo: set of the router ip
+                                        },
                                         _ => { error!("Unexpected header value."); }
                                     }
                                 },

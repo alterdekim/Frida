@@ -14,7 +14,7 @@ use network_interface::NetworkInterface;
 use network_interface::NetworkInterfaceConfig;
 
 use crate::config::{ ServerConfiguration, ServerPeer};
-use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
+use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnAskForIP, UDPVpnHandshake, UDPVpnPacket, UDPVpnRouterIP};
 
 fn configure_routes(s_interface: Option<&str>) {
     let interfaces = NetworkInterface::show().unwrap();
@@ -189,7 +189,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                     Some(h) => {
                         match h {
                             0 => {
-                                let handshake = UDPVpnHandshake::deserialize(&buf);
+                                let handshake = UDPVpnHandshake::deserialize(&buf); // todo: replace &buf reference with length dependent reference.
                                 info!("Got handshake from {:?}", handshake.request_ip);
                                 let skey = BASE64_STANDARD.encode(&handshake.public_key);
                                 if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
@@ -227,6 +227,14 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                     }
                                 });
                             }, // payload
+                            2 => { }, // got keepalive packet
+                            3 => {
+                                if let Ok(_packet) = UDPVpnAskForIP::deserialize(&(buf[..len].to_vec())) {
+                                    info!("Router address requested");
+                                    let response = UDPVpnRouterIP {router_ip: server_config.interface.internal_address.parse::<Ipv4Addr>().unwrap()};
+                                    let _ = send2hnd_ssr.send((response.serialize(), addr));
+                                }
+                            }, // fake router address request
                             _ => error!("Unexpected header value.")
                         }
                     },
