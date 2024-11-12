@@ -1,16 +1,6 @@
 use crossbeam_channel::unbounded;
 use socket2::SockAddr;
 
-/*
-What the fuck I want to implement?
-I need to make abstract class VPNClient which should be extended by several others:
-AndroidClient
-DesktopClient
-
-Both of child classes should trigger the same "core vpn client" module
-
-*/
-
 pub mod general {
     use crate::config::ClientConfiguration;
     use tokio_util::sync::CancellationToken;
@@ -24,8 +14,8 @@ pub mod general {
     use std::net::Ipv4Addr;
     use std::pin::pin;
     use x25519_dalek::{PublicKey, StaticSecret};
-    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable, UDPVpnRouterIP};
-    use tun2::{platform::Device, Configuration, DeviceReader, DeviceWriter};
+    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+    use tun2::{AbstractDevice, AsyncDevice, Configuration, DeviceReader, DeviceWriter};
 
     trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
@@ -61,20 +51,37 @@ pub mod general {
     }
 
     trait WriteWrapper {
-        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()>;
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()>;
+    }
+
+    pub enum WriterMessage {
+        Plain(Vec<u8>),
+        Gateway(Ipv4Addr)
     }
 
     pub struct DevWriter {
-        pub dr: DeviceWriter
+        pub dr: DeviceWriter,
+        //pub dev: AsyncDevice
     }
 
     // TODO: implement custom Error
     impl WriteWrapper for DevWriter {
-        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
-            if let Ok(a) = self.dr.write(buf).await {
-                return Ok(a);
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
+            match msg {
+                WriterMessage::Plain(buf) => {
+                    if let Ok(a) = self.dr.write(&buf).await {
+                        return Ok(a);
+                    }
+                    Err(())
+                },
+                WriterMessage::Gateway(addr) => {
+                   /* if self.dev.set_destination(addr.into()).is_err() {
+                        return Err(());
+                    }*/
+                    Ok(0)
+                }
             }
-            Err(())
+            
         }
     }
     
@@ -83,11 +90,16 @@ pub mod general {
     }
 
     impl WriteWrapper for FdWriter {
-        async fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
-            if let Ok(a) = self.br.write(buf).await {
-                return Ok(a);
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
+            match msg {
+                WriterMessage::Plain(buf) => {
+                    if let Ok(a) = self.br.write(&buf).await {
+                        return Ok(a);
+                    }
+                    Err(())
+                },
+                WriterMessage::Gateway(_addr) => {Ok(0)}
             }
-            Err(())
         }
     }
 
@@ -133,7 +145,7 @@ pub mod general {
         
             let s_cipher = cipher_shared.clone();
     
-            self.dev_writer.write(&handshake.serialize()).await;
+            self.dev_writer.write(WriterMessage::Plain(handshake.serialize())).await;
     
             let mut buf = vec![0; 1400]; // mtu
             let mut buf1 = vec![0; 4096];
@@ -149,7 +161,7 @@ pub mod general {
                     rr = rx.recv() => {
                         if let Some(bytes) = rr {
                             info!("Write to tun.");
-                            if let Err(e) = self.dev_writer.write(&bytes).await {
+                            if let Err(e) = self.dev_writer.write(WriterMessage::Plain(bytes)).await {
                                 error!("Writing error: {:?}", e);
                             }
                            /* if let Err(e) = self.dev_writer.flush().await {
@@ -219,10 +231,6 @@ pub mod general {
                                             }
                                         }, // payload
                                         2 => { info!("Got keepalive packet"); },
-                                        3 => { 
-                                            let router_packet = UDPVpnRouterIP::deserialize(&(buf1[..l].to_vec()));
-                                            // todo: set of the router ip
-                                        },
                                         _ => { error!("Unexpected header value."); }
                                     }
                                 },
@@ -313,7 +321,7 @@ pub mod desktop {
         if !ip_output.status.success() {
             error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
-    
+        // TODO: replace 192.168.0.1 with relative variable
         ip_output = Command::new("sudo")
             .arg("ip")
             .arg("route")
@@ -342,7 +350,8 @@ pub mod desktop {
             let mut config = tun2::Configuration::default();
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
-                .destination("10.66.66.1")
+                .destination(&self.client_config.client.address)
+                .mtu(1400)
                 .tun_name("tun0")
                 .up();
         
@@ -351,7 +360,7 @@ pub mod desktop {
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             let dev = tun2::create_as_async(&config).unwrap();
-            let (mut dev_writer, mut dev_reader) = dev.split().unwrap();
+            let (dev_writer, dev_reader) = dev.split().unwrap();
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
             let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
 
