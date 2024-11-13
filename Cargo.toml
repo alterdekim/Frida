@@ -1,6 +1,6 @@
 [package]
 name = "frida_vpn"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["alterdekim"]
@@ -21,7 +21,6 @@ path = "src/main.rs"
 [[bin]]
 name = "frida-gui"
 path = "src/gui/mod.rs"
-
 
 [dependencies]
 clap = "2.33"

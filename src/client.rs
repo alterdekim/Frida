@@ -291,7 +291,7 @@ pub mod desktop {
     
         info!("Main network interface: {:?}", inter_name);
     
-        /*let mut ip_output = Command::new("sudo")
+        /*let mut ip_output = std::process::Command::new("sudo")
             .arg("ip")
             .arg("route")
             .arg("del")
@@ -303,7 +303,7 @@ pub mod desktop {
             error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }*/
     
-        let mut ip_output = Command::new("sudo")
+        let mut ip_output = std::process::Command::new("sudo")
             .arg("ip")
             .arg("-4")
             .arg("route")
@@ -315,10 +315,10 @@ pub mod desktop {
             .expect("Failed to execute ip route command.");
     
         if !ip_output.status.success() {
-            error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+            log::error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
         // TODO: replace 192.168.0.1 with relative variable
-        ip_output = Command::new("sudo")
+        ip_output = std::process::Command::new("sudo")
             .arg("ip")
             .arg("route")
             .arg("add")
@@ -331,7 +331,7 @@ pub mod desktop {
             .expect("Failed to make exception for vpns endpoint.");
     
         if !ip_output.status.success() {
-            error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+            log::error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
     }
 
@@ -362,7 +362,7 @@ pub mod desktop {
 
             #[cfg(target_os = "linux")]
             {
-                let s_a: SocketAddr = self.client_config.server.endpoint.parse().unwrap();
+                let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
                 configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
             }
             

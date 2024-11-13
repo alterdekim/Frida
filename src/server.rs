@@ -29,7 +29,7 @@ fn configure_routes(s_interface: Option<&str>) {
 
     let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { &net_inter.name };
 
-    let mut ip_output = Command::new("iptables")
+    let mut ip_output = std::process::Command::new("iptables")
         .arg("-A")
         .arg("FORWARD")
         .arg("-i")
@@ -45,7 +45,7 @@ fn configure_routes(s_interface: Option<&str>) {
         error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
 
-    ip_output = Command::new("iptables")
+    ip_output = std::process::Command::new("iptables")
         .arg("-A")
         .arg("FORWARD")
         .arg("-i")
@@ -65,7 +65,7 @@ fn configure_routes(s_interface: Option<&str>) {
         error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
     }
     
-    ip_output = Command::new("iptables")
+    ip_output = std::process::Command::new("iptables")
         .arg("-t")
         .arg("nat")
         .arg("-A")
@@ -82,7 +82,7 @@ fn configure_routes(s_interface: Option<&str>) {
     }
 }
 
-pub async fn server_mode(server_config: ServerConfiguration, _s_interface: Option<&str>) {
+pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
     
     let mut config = tun2::Configuration::default();
