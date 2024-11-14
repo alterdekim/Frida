@@ -85,13 +85,13 @@ fn configure_routes(s_interface: Option<&str>) {
 pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
     
-    let mut config = tun2::Configuration::default();
+    let mut config = tun::Configuration::default();
     config.address(&server_config.interface.internal_address)
         .netmask("255.255.255.0")
         .tun_name("tun0")
         .up();
 
-    let dev = tun2::create_as_async(&config).unwrap();
+    let dev = tun::create_as_async(&config).unwrap();
     let (mut dev_writer, mut dev_reader) = dev.into_framed().split();
 
     let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();

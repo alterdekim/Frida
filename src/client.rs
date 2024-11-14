@@ -13,7 +13,7 @@ pub mod general {
     
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-    use tun2::{DeviceReader, DeviceWriter};
+    use tun::{DeviceReader, DeviceWriter};
 
     pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
@@ -343,7 +343,7 @@ pub mod desktop {
     impl VpnClient for DesktopClient {
         async fn start(&self) {
             info!("s_interface: {:?}", &self.s_interface);
-            let mut config = tun2::Configuration::default();
+            let mut config = tun::Configuration::default();
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
                 .destination(&self.client_config.client.address)
@@ -361,7 +361,7 @@ pub mod desktop {
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             info!("AsyncDevice");
-            let dev = tun2::create_as_async(&config).unwrap();
+            let dev = tun::create_as_async(&config).unwrap();
             info!("Split device");
             let (dev_writer, dev_reader) = dev.split().unwrap();
             info!("CoreVpnClient");
