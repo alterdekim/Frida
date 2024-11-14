@@ -355,11 +355,14 @@ pub mod desktop {
             let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
+            info!("AsyncDevice");
             let dev = tun2::create_as_async(&config).unwrap();
+            info!("Split device");
             let (dev_writer, dev_reader) = dev.split().unwrap();
+            info!("CoreVpnClient");
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
            
-
+            info!("Platform specific code");
             #[cfg(target_os = "linux")]
             {
                 let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
