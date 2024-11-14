@@ -1584,7 +1584,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tray-item",
- "tun2",
+ "tun",
  "x25519-dalek",
 ]
 
@@ -4547,10 +4547,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5902c5d130972a0000f60860bfbf46f7ca3db5391eddfedd1b8728bd9dc96c0e"
 
 [[package]]
-name = "tun2"
-version = "4.0.0"
+name = "tun"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21afe73d3d42581a7400fbf5aec057a646ffe3f8bb5ae3f61d88c7e7f4ac77be"
+checksum = "deb73046acd7ffa6366838c7ecea46781f9bf462ba2de56df758b77dc5c8a679"
 dependencies = [
  "bytes",
  "cfg-if",
@@ -4560,7 +4560,7 @@ dependencies = [
  "libc",
  "log",
  "nix",
- "thiserror 1.0.64",
+ "thiserror 2.0.3",
  "tokio",
  "tokio-util",
  "windows-sys 0.59.0",
