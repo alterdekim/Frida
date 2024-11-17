@@ -49,8 +49,10 @@ network-interface = "2.0.0"
 [target.'cfg(target_os="linux")'.dependencies]
 tun2 = { version = "2", features = ["async"] }
 
-[target.'cfg(target_os="windows")'.dependencies]
+[target.'cfg(not(target_os="linux"))'.dependencies]
 tun = { version = "0.7", features = ["async"] }
+
+[target.'cfg(target_os="windows")'.dependencies]
 iced = { version = "0.13.1", features = ["tokio"] }
 dirs = "5.0.1"
 tray-item = "0.10.0"
@@ -59,7 +61,6 @@ tray-item = "0.10.0"
 embed-resource = "2.3"
 
 [target.'cfg(target_os="android")'.dependencies]
-tun = { version = "0.7", features = ["async"] }
 jni = "^0.20"
 robusta_jni = "0.2.2"
 nonblock = "0.2.0"
