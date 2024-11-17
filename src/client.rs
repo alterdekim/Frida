@@ -8,31 +8,24 @@ pub mod general {
         aead::{Aead, AeadCore, KeyInit, OsRng},
         Aes256Gcm, Nonce};
     use base64::prelude::*;
-    use std::sync::Arc;
+    use std::{io::{Read, Write}, sync::Arc};
     use std::net::Ipv4Addr;
     
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-    
-    #[cfg(not(target_os = "linux"))]
-    use tun::{DeviceReader, DeviceWriter};
-
-    #[cfg(target_os = "linux")]
-    use tun2::{DeviceReader, DeviceWriter};
 
     pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
     }
 
-    pub struct DevReader {
-        pub dr: DeviceReader
+    pub struct DevReader<R> where R: Read {
+        pub dr: R
     }
 
     // TODO: implement custom Error
-    impl ReadWrapper for DevReader {
+    impl<R: Read> ReadWrapper for DevReader<R> {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
-            let r = self.dr.read(buf).await;
-            if let Ok(a) = r {
+            if let Ok(a) = self.dr.read(buf) {
                 return Ok(a);
             }
             Err(())
@@ -62,17 +55,17 @@ pub mod general {
         Gateway(Ipv4Addr)
     }
 
-    pub struct DevWriter {
-        pub dr: DeviceWriter,
+    pub struct DevWriter<W> where W: Write {
+        pub dr: W,
         //pub dev: AsyncDevice
     }
 
     // TODO: implement custom Error
-    impl WriteWrapper for DevWriter {
+    impl<W: Write> WriteWrapper for DevWriter<W> {
         async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
             match msg {
                 WriterMessage::Plain(buf) => {
-                    if let Ok(a) = self.dr.write(&buf).await {
+                    if let Ok(a) = self.dr.write(&buf) {
                         return Ok(a);
                     }
                     Err(())
@@ -282,11 +275,7 @@ pub mod desktop {
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
-    #[cfg(target_os = "linux")]
-    use tun2::{ Configuration, create_as_async };
-
-    #[cfg(not(target_os = "linux"))]
-    use tun::{ Configuration, create_as_async };
+    use tun::{ Configuration, create };
 
 
     #[cfg(target_os = "linux")]
@@ -372,9 +361,9 @@ pub mod desktop {
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             info!("AsyncDevice");
-            let dev = create_as_async(&config).unwrap();
+            let dev = create(&config).unwrap();
             info!("Split device");
-            let (dev_writer, dev_reader) = dev.split().unwrap();
+            let (dev_reader, dev_writer) = dev.split();
             info!("CoreVpnClient");
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
            

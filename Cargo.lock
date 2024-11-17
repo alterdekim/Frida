@@ -604,31 +604,11 @@ checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 
 [[package]]
 name = "c2rust-bitfields"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b43c3f07ab0ef604fa6f595aa46ec2f8a22172c975e186f6f5bf9829a3b72c41"
-dependencies = [
- "c2rust-bitfields-derive 0.18.0",
-]
-
-[[package]]
-name = "c2rust-bitfields"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "367e5d1b30f28be590b6b3868da1578361d29d9bfac516d22f497d28ed7c9055"
 dependencies = [
- "c2rust-bitfields-derive 0.19.0",
-]
-
-[[package]]
-name = "c2rust-bitfields-derive"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3cbc102e2597c9744c8bd8c15915d554300601c91a079430d309816b0912545"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
+ "c2rust-bitfields-derive",
 ]
 
 [[package]]
@@ -1604,7 +1584,6 @@ dependencies = [
  "tokio-util",
  "tray-item",
  "tun",
- "tun2",
  "x25519-dalek",
 ]
 
@@ -4574,29 +4553,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "windows-sys 0.59.0",
- "wintun-bindings 0.7.17",
-]
-
-[[package]]
-name = "tun2"
-version = "2.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b139b40733b3e81560335ccad94948916c4d03ed1ded505a8675428879075b4"
-dependencies = [
- "bytes",
- "cfg-if",
- "futures-core",
- "ipnet",
- "libc",
- "libloading 0.8.5",
- "log",
- "nix",
- "rustversion",
- "thiserror 1.0.64",
- "tokio",
- "tokio-util",
- "windows-sys 0.59.0",
- "wintun-bindings 0.6.4",
+ "wintun-bindings",
 ]
 
 [[package]]
@@ -5457,25 +5414,12 @@ dependencies = [
 
 [[package]]
 name = "wintun-bindings"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3af47a132f449a64ff858f9ad876a3d1812df30e9500cddfdcabb2266ab68c0d"
-dependencies = [
- "c2rust-bitfields 0.18.0",
- "libloading 0.8.5",
- "log",
- "thiserror 1.0.64",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "wintun-bindings"
 version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8aed5bc5516ca7a52018b0a198911566edfa07584bdbfd71ea39161aa13806e"
 dependencies = [
  "blocking",
- "c2rust-bitfields 0.19.0",
+ "c2rust-bitfields",
  "futures",
  "libloading 0.8.5",
  "log",

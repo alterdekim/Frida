@@ -9,11 +9,6 @@ use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
-
-#[cfg(target_os = "linux")]
-use tun2::{Configuration, create_as_async};
-
-#[cfg(not(target_os = "linux"))]
 use tun::{Configuration, create_as_async};
 
 #[cfg(target_os = "linux")]
