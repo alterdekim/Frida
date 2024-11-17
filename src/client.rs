@@ -13,7 +13,12 @@ pub mod general {
     
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
+    
+    #[cfg(not(target_os = "linux"))]
     use tun::{DeviceReader, DeviceWriter};
+
+    #[cfg(target_os = "linux")]
+    use tun2::{DeviceReader, DeviceWriter};
 
     pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
@@ -277,6 +282,12 @@ pub mod desktop {
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
+    #[cfg(target_os = "linux")]
+    use tun2::{ Configuration, create_as_async };
+
+    #[cfg(not(target_os = "linux"))]
+    use tun::{ Configuration, create_as_async };
+
 
     #[cfg(target_os = "linux")]
     fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
@@ -343,7 +354,7 @@ pub mod desktop {
     impl VpnClient for DesktopClient {
         async fn start(&self) {
             info!("s_interface: {:?}", &self.s_interface);
-            let mut config = tun::Configuration::default();
+            let mut config = Configuration::default();
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
                 .destination(&self.client_config.client.address)
@@ -361,7 +372,7 @@ pub mod desktop {
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             info!("AsyncDevice");
-            let dev = tun::create_as_async(&config).unwrap();
+            let dev = create_as_async(&config).unwrap();
             info!("Split device");
             let (dev_writer, dev_reader) = dev.split().unwrap();
             info!("CoreVpnClient");

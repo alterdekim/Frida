@@ -11,6 +11,12 @@ use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
 
 #[cfg(target_os = "linux")]
+use tun2::{Configuration, create_as_async};
+
+#[cfg(not(target_os = "linux"))]
+use tun::{Configuration, create_as_async};
+
+#[cfg(target_os = "linux")]
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
 use crate::config::{ ServerConfiguration, ServerPeer};
@@ -85,13 +91,13 @@ fn configure_routes(s_interface: Option<&str>) {
 pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
     
-    let mut config = tun::Configuration::default();
+    let mut config = Configuration::default();
     config.address(&server_config.interface.internal_address)
         .netmask("255.255.255.0")
         .tun_name("tun0")
         .up();
 
-    let dev = tun::create_as_async(&config).unwrap();
+    let dev = create_as_async(&config).unwrap();
     let (mut dev_writer, mut dev_reader) = dev.into_framed().split();
 
     let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();
