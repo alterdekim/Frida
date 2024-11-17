@@ -604,11 +604,31 @@ checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 
 [[package]]
 name = "c2rust-bitfields"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b43c3f07ab0ef604fa6f595aa46ec2f8a22172c975e186f6f5bf9829a3b72c41"
+dependencies = [
+ "c2rust-bitfields-derive 0.18.0",
+]
+
+[[package]]
+name = "c2rust-bitfields"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "367e5d1b30f28be590b6b3868da1578361d29d9bfac516d22f497d28ed7c9055"
 dependencies = [
- "c2rust-bitfields-derive",
+ "c2rust-bitfields-derive 0.19.0",
+]
+
+[[package]]
+name = "c2rust-bitfields-derive"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3cbc102e2597c9744c8bd8c15915d554300601c91a079430d309816b0912545"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -1580,11 +1600,11 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_yaml",
- "socket2 0.4.10",
  "tokio",
  "tokio-util",
  "tray-item",
  "tun",
+ "tun2",
  "x25519-dalek",
 ]
 
@@ -2061,7 +2081,7 @@ dependencies = [
  "http-body",
  "hyper",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2",
  "tokio",
  "tower-service",
  "tracing",
@@ -4001,16 +4021,6 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.4.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f7916fc008ca5542385b89a3d3ce689953c143e9304a9bf8beec1de48994c0d"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
-name = "socket2"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
@@ -4308,7 +4318,7 @@ dependencies = [
  "parking_lot 0.12.3",
  "pin-project-lite",
  "signal-hook-registry",
- "socket2 0.5.7",
+ "socket2",
  "tokio-macros",
  "tracing",
  "windows-sys 0.52.0",
@@ -4404,7 +4414,7 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "prost",
- "socket2 0.5.7",
+ "socket2",
  "tokio",
  "tokio-stream",
  "tower 0.4.13",
@@ -4564,7 +4574,29 @@ dependencies = [
  "tokio",
  "tokio-util",
  "windows-sys 0.59.0",
- "wintun-bindings",
+ "wintun-bindings 0.7.17",
+]
+
+[[package]]
+name = "tun2"
+version = "2.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b139b40733b3e81560335ccad94948916c4d03ed1ded505a8675428879075b4"
+dependencies = [
+ "bytes",
+ "cfg-if",
+ "futures-core",
+ "ipnet",
+ "libc",
+ "libloading 0.8.5",
+ "log",
+ "nix",
+ "rustversion",
+ "thiserror 1.0.64",
+ "tokio",
+ "tokio-util",
+ "windows-sys 0.59.0",
+ "wintun-bindings 0.6.4",
 ]
 
 [[package]]
@@ -5425,12 +5457,25 @@ dependencies = [
 
 [[package]]
 name = "wintun-bindings"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3af47a132f449a64ff858f9ad876a3d1812df30e9500cddfdcabb2266ab68c0d"
+dependencies = [
+ "c2rust-bitfields 0.18.0",
+ "libloading 0.8.5",
+ "log",
+ "thiserror 1.0.64",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "wintun-bindings"
 version = "0.7.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8aed5bc5516ca7a52018b0a198911566edfa07584bdbfd71ea39161aa13806e"
 dependencies = [
  "blocking",
- "c2rust-bitfields",
+ "c2rust-bitfields 0.19.0",
  "futures",
  "libloading 0.8.5",
  "log",
