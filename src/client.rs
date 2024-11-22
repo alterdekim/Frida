@@ -14,18 +14,20 @@ pub mod general {
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 
+    use tun::{ DeviceReader, DeviceWriter };
+
     pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()>;
     }
 
-    pub struct DevReader<R> where R: Read {
-        pub dr: R
+    pub struct DevReader {
+        pub dr: DeviceReader
     }
 
     // TODO: implement custom Error
-    impl<R: Read> ReadWrapper for DevReader<R> {
+    impl ReadWrapper for DevReader {
         async fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
-            if let Ok(a) = self.dr.read(buf) {
+            if let Ok(a) = self.dr.read(buf).await {
                 return Ok(a);
             }
             Err(())
@@ -55,17 +57,17 @@ pub mod general {
         Gateway(Ipv4Addr)
     }
 
-    pub struct DevWriter<W> where W: Write {
-        pub dr: W,
+    pub struct DevWriter {
+        pub dr: DeviceWriter,
         //pub dev: AsyncDevice
     }
 
     // TODO: implement custom Error
-    impl<W: Write> WriteWrapper for DevWriter<W> {
+    impl WriteWrapper for DevWriter {
         async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
             match msg {
                 WriterMessage::Plain(buf) => {
-                    if let Ok(a) = self.dr.write(&buf) {
+                    if let Ok(a) = self.dr.write(&buf).await {
                         return Ok(a);
                     }
                     Err(())
@@ -272,10 +274,11 @@ pub mod desktop {
     use crate::config::ClientConfiguration;
     use log::info;
     use tokio::net::UdpSocket;
+
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
-    use tun::{ Configuration, create };
+    use tun::{ Configuration, create_as_async };
 
 
     #[cfg(target_os = "linux")]
@@ -361,9 +364,10 @@ pub mod desktop {
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             
             info!("AsyncDevice");
-            let dev = create(&config).unwrap();
+            let dev = create_as_async(&config).unwrap();
             info!("Split device");
-            let (dev_reader, dev_writer) = dev.split();
+            let dr = dev.split();
+            let (dev_writer, dev_reader) = dr.unwrap();
             info!("CoreVpnClient");
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer}, close_token: tokio_util::sync::CancellationToken::new()};
            
