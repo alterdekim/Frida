@@ -397,11 +397,11 @@ pub mod desktop {
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: rx }, dev_writer: DevWriter{dr: wx}, close_token: tokio_util::sync::CancellationToken::new()};
            
             info!("Platform specific code");
-            #[cfg(target_os = "linux")]
+           /* #[cfg(target_os = "linux")]
             {
                 let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
                 configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
-            }
+            }*/
             
             client.start(sock).await;
         }
