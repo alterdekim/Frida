@@ -1,7 +1,7 @@
 
 pub mod general {
     use crate::config::ClientConfiguration;
-    use crossbeam_channel::{Receiver, Sender};
+    use async_channel::{Receiver, Sender};
     use futures::{stream::SplitSink, StreamExt};
     use tokio_util::{codec::Framed, sync::CancellationToken};
     use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{AsyncWriteExt, AsyncReadExt}, fs::File};
@@ -29,7 +29,7 @@ pub mod general {
     // TODO: implement custom Error
     impl ReadWrapper for DevReader {
         async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()> {
-            if let Ok(tb) = self.dr.recv() {
+            if let Ok(tb) = self.dr.recv().await {
                 *buf = tb;
                 return Ok(buf.len());
             }
@@ -70,7 +70,7 @@ pub mod general {
             match msg {
                 WriterMessage::Plain(buf) => {
                     let l = buf.len();
-                    if let Ok(()) = self.dr.send(buf) {
+                    if let Ok(()) = self.dr.send(buf).await {
                         return Ok(l);
                     }
                     Err(())
@@ -278,7 +278,7 @@ pub mod desktop {
     use futures::{SinkExt, StreamExt};
     use log::info;
     use tokio::net::UdpSocket;
-    use crossbeam_channel::unbounded;
+    use async_channel::unbounded;
 
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
@@ -388,7 +388,7 @@ pub mod desktop {
 
             tokio::spawn(async move {
                 loop {
-                    if let Ok(buf) = wrx.recv() {
+                    if let Ok(buf) = wrx.recv().await {
                         let _ = dev_writer.send(buf).await;
                     }
                 }

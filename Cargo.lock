@@ -1555,13 +1555,13 @@ name = "frida_vpn"
 version = "0.1.7"
 dependencies = [
  "aes-gcm",
+ "async-channel",
  "base64 0.22.1",
  "block-modes",
  "block-padding",
  "chrono",
  "clap",
  "console-subscriber",
- "crossbeam-channel",
  "dirs 5.0.1",
  "embed-resource",
  "env_logger",
