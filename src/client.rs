@@ -351,6 +351,7 @@ pub mod desktop {
     impl VpnClient for DesktopClient {
         async fn start(&self) {
             info!("s_interface: {:?}", &self.s_interface);
+            info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = Configuration::default();
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
