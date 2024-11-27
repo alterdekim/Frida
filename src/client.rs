@@ -2,7 +2,7 @@
 pub mod general {
     use crate::config::ClientConfiguration;
     use async_channel::{Receiver, Sender};
-    use futures::{stream::SplitSink, StreamExt};
+    use futures::{stream::{SplitSink, SplitStream}, SinkExt, StreamExt};
     use tokio_util::{codec::Framed, sync::CancellationToken};
     use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{AsyncWriteExt, AsyncReadExt}, fs::File};
     use log::{error, info, warn};
@@ -23,13 +23,13 @@ pub mod general {
     }
 
     pub struct DevReader {
-        pub dr: Receiver<Vec<u8>>
+        pub dr: SplitStream<Framed<AsyncDevice, TunPacketCodec>>
     }
 
     // TODO: implement custom Error
     impl ReadWrapper for DevReader {
         async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()> {
-            if let Ok(tb) = self.dr.recv().await {
+            if let Some(Ok(tb)) = self.dr.next().await {
                 *buf = tb;
                 return Ok(buf.len());
             }
@@ -61,7 +61,7 @@ pub mod general {
     }
 
     pub struct DevWriter {
-        pub dr: Sender<Vec<u8>>
+        pub dr: SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>
     }
 
     // TODO: implement custom Error
@@ -79,8 +79,7 @@ pub mod general {
                 WriterMessage::Gateway(_addr) => {
                     Ok(0)
                 }
-            }
-            
+            } 
         }
     }
     
@@ -146,7 +145,7 @@ pub mod general {
             let _ = self.dev_writer.write(WriterMessage::Plain(handshake.serialize())).await;
     
             let mut buf = vec![0; 1400]; // mtu
-            let mut buf1 = vec![0; 4096];
+            let mut buf1 = vec![0; 4096]; // should be changed to less bytes
 
             loop {
                 tokio::select! {
@@ -278,7 +277,7 @@ pub mod desktop {
     use futures::{SinkExt, StreamExt};
     use log::info;
     use tokio::net::UdpSocket;
-    use async_channel::unbounded;
+    use tokio::sync::Mutex;
 
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
@@ -371,30 +370,8 @@ pub mod desktop {
 
             let dev = create_as_async(&config).unwrap();
             let (mut dev_writer , mut dev_reader) = dev.into_framed().split();
-            
-            // dev_reader
-            let (tx, rx) = unbounded();
 
-            // dev_writer
-            let (wx, wrx) = unbounded();
-
-            tokio::spawn(async move {
-                loop {
-                    if let Some(Ok(buf)) = dev_reader.next().await {
-                        let _ = tx.send(buf).await;
-                    }
-                }
-            });
-
-            tokio::spawn(async move {
-                loop {
-                    if let Ok(buf) = wrx.recv().await {
-                        let _ = dev_writer.send(buf).await;
-                    }
-                }
-            });
-
-            let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: rx }, dev_writer: DevWriter{dr: wx}, close_token: tokio_util::sync::CancellationToken::new()};
+            let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer }, close_token: tokio_util::sync::CancellationToken::new()};
            
             info!("Platform specific code");
            /* #[cfg(target_os = "linux")]
