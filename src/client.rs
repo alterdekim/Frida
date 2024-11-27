@@ -52,7 +52,7 @@ pub mod general {
     }
 
     pub trait WriteWrapper {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()>;
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String>;
     }
 
     pub enum WriterMessage {
@@ -66,14 +66,18 @@ pub mod general {
 
     // TODO: implement custom Error
     impl WriteWrapper for DevWriter {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String> {
             match msg {
                 WriterMessage::Plain(buf) => {
                     let l = buf.len();
-                    if let Ok(()) = self.dr.send(buf).await {
+                    return match self.dr.send(buf).await {
+                        Ok(()) => Ok(l),
+                        Err(e) => Err(e.to_string())
+                    };
+                    /* if let Ok(()) = self.dr.send(buf).await {
                         return Ok(l);
                     }
-                    Err(())
+                    Err(()) */
                 },
                 // this thing should be abolished later
                 WriterMessage::Gateway(_addr) => {
@@ -88,13 +92,13 @@ pub mod general {
     }
 
     impl WriteWrapper for FdWriter {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, ()> {
+        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String> {
             match msg {
                 WriterMessage::Plain(buf) => {
                     if let Ok(a) = self.br.write(&buf).await {
                         return Ok(a);
                     }
-                    Err(())
+                    Err(String::new())
                 },
                 WriterMessage::Gateway(_addr) => {Ok(0)}
             }
