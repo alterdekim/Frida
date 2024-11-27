@@ -371,7 +371,7 @@ pub mod desktop {
 
             let dev = create_as_async(&config).unwrap();
             let (mut dev_writer , mut dev_reader) = dev.into_framed().split();
-
+            
             // dev_reader
             let (tx, rx) = unbounded();
 
@@ -381,7 +381,7 @@ pub mod desktop {
             tokio::spawn(async move {
                 loop {
                     if let Some(Ok(buf)) = dev_reader.next().await {
-                        tx.send(buf);
+                        let _ = tx.send(buf).await;
                     }
                 }
             });
