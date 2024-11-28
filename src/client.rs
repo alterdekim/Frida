@@ -161,7 +161,7 @@ pub mod general {
                     }
                     rr = rx.recv() => {
                         if let Some(bytes) = rr {
-                            info!("Write to tun.");
+                            info!("Write to tun. len={:?}", bytes.len());
                             if let Err(e) = self.dev_writer.write(WriterMessage::Plain(bytes)).await {
                                 error!("Writing error: {:?}", e);
                             }
