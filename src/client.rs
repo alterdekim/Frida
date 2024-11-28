@@ -16,7 +16,7 @@ pub mod general {
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 
-    use tun::{ AsyncDevice, DeviceReader, DeviceWriter, TunPacketCodec };
+    use tun2::{ AsyncDevice, DeviceReader, DeviceWriter, TunPacketCodec };
 
     pub trait ReadWrapper {
         async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()>;
@@ -286,7 +286,7 @@ pub mod desktop {
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
-    use tun::{ Configuration, create_as_async };
+    use tun2::{ Configuration, create_as_async };
 
 
     #[cfg(target_os = "linux")]
