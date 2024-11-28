@@ -362,11 +362,6 @@ pub mod desktop {
                 .mtu(1400)
                 .tun_name("tun0")
                 .up();
-
-            #[cfg(target_os = "linux")]
-            config.platform_config(|config| {
-                config.ensure_root_privileges(true);
-            });
         
             info!("SSS: {:?}", &self.client_config.server.endpoint);
             let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
