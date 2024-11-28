@@ -359,7 +359,7 @@ pub mod desktop {
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
                 .destination("10.66.66.1")
-                .mtu(1400)
+                //.mtu(1400)
                 .tun_name("tun0")
                 .up();
         
