@@ -354,7 +354,7 @@ pub mod desktop {
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = Configuration::default();
             config.address(&self.client_config.client.address)
-                .netmask("0.0.0.0")
+                .netmask("255.255.255.255")
                 .destination("10.66.66.1")
                 .mtu(1400)
                 .tun_name("tun0")
