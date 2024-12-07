@@ -1,12 +1,2 @@
 [workspace]
 members = ["frida_core","frida_client","frida_server","frida_cli","frida_gui","frida_lib"]
-
-[package]
-name = "frida_vpn"
-version = "0.2.0"
-edition = "2021"
-license-file = "LICENSE.md"
-authors = ["alterwain"]
-keywords = ["tun", "network", "tunnel", "vpn"]
-categories = ["network-programming", "asynchronous"]
-readme = "README.md"

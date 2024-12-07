@@ -1,12 +1,13 @@
 [package]
 name = "frida_core"
-version.workspace = true
-edition.workspace = true
-license-file.workspace = true
-authors.workspace = true
-keywords.workspace = true
-categories.workspace = true
-readme.workspace = true
+version = "0.2.0"
+edition = "2021"
+license-file = "../LICENSE.md"
+authors = ["alterwain"]
+keywords = ["tun", "network", "tunnel", "vpn"]
+categories = ["network-programming", "asynchronous"]
+readme = "../README.md"
+workspace = "../"
 
 [lib]
 crate-type = ["cdylib"]
