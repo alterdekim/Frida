@@ -12,9 +12,9 @@ pub fn create() -> (DeviceReader, DeviceWriter) {
     let adapter = match wintun::Adapter::open(&wintun, "Demo") {
     Ok(a) => a,
     Err(_) => {
-        wintun::Adapter::create(&wintun, "Demo", "Example", None)
-            .expect("Failed to create wintun adapter!")
-    }
+            wintun::Adapter::create(&wintun, "Demo", "Example", None)
+                .expect("Failed to create wintun adapter!")
+        }
     };
 
     let session = Arc::new(adapter.start_session(wintun::MAX_RING_CAPACITY).unwrap());

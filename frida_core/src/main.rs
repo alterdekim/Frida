@@ -3,7 +3,12 @@ use log::{info, error, LevelFilter};
 
 mod device;
 mod tun;
+
+#[cfg(target_os = "windows")]
 mod win_tun;
+
+#[cfg(target_os = "linux")]
+mod linux_tun;
 
 #[tokio::main]
 async fn main() {
