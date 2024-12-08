@@ -16,7 +16,7 @@ async fn main() {
         .filter(None, LevelFilter::Info)
         .init();
 
-    let (reader, writer) = tun::create_tun();
+    let (reader, _writer) = tun::create_tun();
 
     let a = tokio::spawn(async move {
         let mut buf = Vec::new();
@@ -25,11 +25,11 @@ async fn main() {
             // info!("We've got {} bytes of data!", c)
             let r = reader.read(&mut buf).await;
             match r {
-                Ok(c) => {},
-                Err(e) => error!("We've got a nasty error message!")
+                Ok(_c) => {},
+                Err(_e) => error!("We've got a nasty error message!")
             }
         }
     });
 
-    a.await;
+    let _ = a.await;
 }

@@ -1,5 +1,8 @@
 use std::sync::Arc;
 use std::error::Error;
+use tokio_tun::Tun;
+use std::net::Ipv4Addr;
+use std::os::unix::io::AsRawFd;
 
 pub fn create() -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
@@ -14,23 +17,27 @@ pub fn create() -> (DeviceReader, DeviceWriter) {
 
     println!("tun created, name: {}, fd: {}", tun.name(), tun.as_raw_fd());
 
-    let (mut reader, mut _writer) = tokio::io::split(tun);
+    let tun_writer = tun.clone();
+
+    (DeviceReader {reader: tun}, DeviceWriter {writer: tun_writer})
 }
 
 pub struct DeviceWriter {
-
+    writer: Tun
 }
 
 pub struct DeviceReader {
-
+    reader: Tun
 }
 
 impl DeviceWriter {
     pub async fn write(&self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
+        self.writer.send_all(buf).await
     }
 }
 
 impl DeviceReader {
     pub async fn read(&self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
+        self.reader.recv(buf).await
     }
 }
