@@ -9,4 +9,8 @@ categories = ["network-programming", "asynchronous"]
 readme = "../README.md"
 workspace = "../"
 
+[lib]
+crate-type = ["cdylib"]
+path = "src/android.rs"
+
 [dependencies]
