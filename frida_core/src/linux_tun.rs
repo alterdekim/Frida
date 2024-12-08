@@ -23,11 +23,11 @@ pub fn create() -> (DeviceReader, DeviceWriter) {
 }
 
 pub struct DeviceWriter {
-    writer: Tun
+    writer: Arc<Tun>
 }
 
 pub struct DeviceReader {
-    reader: Tun
+    reader: Arc<Tun>
 }
 
 impl DeviceWriter {
