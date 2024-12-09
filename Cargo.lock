@@ -1644,11 +1644,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
-name = "frida_cli"
+name = "frida-cli"
 version = "0.2.0"
 
 [[package]]
-name = "frida_client"
+name = "frida-client"
+version = "0.2.0"
+dependencies = [
+ "aes-gcm",
+ "base64 0.22.1",
+ "env_logger",
+ "frida_core",
+ "log",
+ "tokio 1.42.0",
+ "tokio-util",
+ "x25519-dalek",
+]
+
+[[package]]
+name = "frida-gui"
+version = "0.2.0"
+
+[[package]]
+name = "frida-lib"
+version = "0.2.0"
+
+[[package]]
+name = "frida-server"
 version = "0.2.0"
 
 [[package]]
@@ -1690,18 +1712,6 @@ dependencies = [
  "wintun",
  "x25519-dalek",
 ]
-
-[[package]]
-name = "frida_gui"
-version = "0.2.0"
-
-[[package]]
-name = "frida_lib"
-version = "0.2.0"
-
-[[package]]
-name = "frida_server"
-version = "0.2.0"
 
 [[package]]
 name = "fuchsia-zircon"

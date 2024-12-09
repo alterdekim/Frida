@@ -1,4 +1,3 @@
-
 pub mod general {
     use crate::config::ClientConfiguration;
     use async_channel::{Receiver, Sender};
@@ -16,103 +15,21 @@ pub mod general {
     use x25519_dalek::{PublicKey, StaticSecret};
     use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
 
-    use tun::{ AsyncDevice, DeviceReader, DeviceWriter, TunPacketCodec };
-
-    pub trait ReadWrapper {
-        async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()>;
-    }
-
-    pub struct DevReader {
-        pub dr: SplitStream<Framed<AsyncDevice, TunPacketCodec>>
-    }
-
-    // TODO: implement custom Error
-    impl ReadWrapper for DevReader {
-        async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()> {
-            if let Some(Ok(tb)) = self.dr.next().await {
-                *buf = tb;
-                return Ok(buf.len());
-            }
-            Err(())
-        }
-    }
-
-    pub struct FdReader {
-        pub br: File
-    }
-
-    impl ReadWrapper for FdReader {
-        async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, ()> {
-            let r = self.br.read(buf).await;
-            if let Ok(a) = r {
-                return Ok(a);
-            }
-            Err(())
-        }
-    }
-
-    pub trait WriteWrapper {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String>;
-    }
-
-    pub enum WriterMessage {
-        Plain(Vec<u8>),
-        Gateway(Ipv4Addr)
-    }
-
-    pub struct DevWriter {
-        pub dr: SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>
-    }
-
-    // TODO: implement custom Error
-    impl WriteWrapper for DevWriter {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String> {
-            match msg {
-                WriterMessage::Plain(buf) => {
-                    let l = buf.len();
-                    return match self.dr.send(buf).await {
-                        Ok(()) => Ok(l),
-                        Err(e) => Err(e.to_string())
-                    };
-                },
-                // this thing should be abolished later
-                WriterMessage::Gateway(_addr) => {
-                    Ok(0)
-                }
-            } 
-        }
-    }
-    
-    pub struct FdWriter {
-        pub br: File
-    }
-
-    impl WriteWrapper for FdWriter {
-        async fn write(&mut self, msg: WriterMessage) -> Result<usize, String> {
-            match msg {
-                WriterMessage::Plain(buf) => {
-                    if let Ok(a) = self.br.write(&buf).await {
-                        return Ok(a);
-                    }
-                    Err(String::new())
-                },
-                WriterMessage::Gateway(_addr) => {Ok(0)}
-            }
-        }
-    }
+    use frida_core::tun::create_tun;
+    use frida_core::{DeviceReader, DeviceWriter};
 
     pub trait VpnClient {
         async fn start(&self);
     }
     
-    pub struct CoreVpnClient<T, R> where T: ReadWrapper, R: WriteWrapper {
+    pub struct CoreVpnClient {
         pub client_config: ClientConfiguration,
-        pub dev_reader: T,
-        pub dev_writer: R,
+        pub dev_reader: DeviceReader,
+        pub dev_writer: DeviceWriter,
         pub close_token: CancellationToken
     }
 
-    impl<T: ReadWrapper + std::marker::Sync, R: WriteWrapper + std::marker::Sync> CoreVpnClient<T, R> {
+    impl CoreVpnClient {
          pub async fn start(&mut self, sock: UdpSocket) {
             info!("Starting client...");
     
@@ -142,7 +59,7 @@ pub mod general {
         
             let s_cipher = cipher_shared.clone();
     
-            let _ = self.dev_writer.write(WriterMessage::Plain(handshake.serialize())).await;
+            let _ = self.dev_writer.write(handshake.serialize()).await;
     
             let mut buf = vec![0; 1400]; // mtu
             let mut buf1 = vec![0; 4096]; // should be changed to less bytes
@@ -159,7 +76,7 @@ pub mod general {
                         if let Some(bytes) = rr {
                             info!("Write to tun. len={:?}", bytes.len());
                             
-                            if let Err(e) = self.dev_writer.write(WriterMessage::Plain(bytes)).await {
+                            if let Err(e) = self.dev_writer.write(&bytes).await {
                                 error!("Writing error: {:?}", e);
                             }
                            /* if let Err(e) = self.dev_writer.flush().await {
@@ -282,8 +199,6 @@ pub mod desktop {
 
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
-
-    use tun::{ Configuration, create_as_async };
 
 
     #[cfg(target_os = "linux")]

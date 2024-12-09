@@ -4,6 +4,6 @@ use crate::win_tun::{DeviceReader, DeviceWriter, create};
 #[cfg(target_os = "linux")]
 use crate::linux_tun::{DeviceReader, DeviceWriter, create};
 
-pub(crate) fn create_tun() -> (DeviceReader, DeviceWriter) {
+pub fn create_tun() -> (DeviceReader, DeviceWriter) {
     create()
 }

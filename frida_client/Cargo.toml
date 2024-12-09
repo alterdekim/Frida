@@ -1,5 +1,5 @@
 [package]
-name = "frida_client"
+name = "frida-client"
 version = "0.2.0"
 edition = "2021"
 license-file = "../LICENSE.md"
@@ -7,6 +7,17 @@ authors = ["alterwain"]
 keywords = ["tun", "network", "tunnel", "vpn"]
 categories = ["network-programming", "asynchronous"]
 readme = "../README.md"
-workspace = "../"
+
+[[bin]]
+name = "frida-client"
+path = "src/client.rs"
 
 [dependencies]
+frida_core = { path = "../frida_core", package = "frida_core" }
+aes-gcm = "0.10.3"
+x25519-dalek = { version = "2.0.1", features = ["getrandom", "static_secrets"] }
+base64 = "0.22.1"
+tokio = { version = "1", features = ["full", "signal", "tracing"] }
+tokio-util = "0.7.12"
+env_logger = "0.9"
+log = "0.4.20"

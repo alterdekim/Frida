@@ -1,5 +1,5 @@
 [package]
-name = "frida_server"
+name = "frida-server"
 version = "0.2.0"
 edition = "2021"
 license-file = "../LICENSE.md"

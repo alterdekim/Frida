@@ -7,11 +7,9 @@ authors = ["alterwain"]
 keywords = ["tun", "network", "tunnel", "vpn"]
 categories = ["network-programming", "asynchronous"]
 readme = "../README.md"
-workspace = "../"
 
-[[bin]]
-name = "frida-core"
-path = "src/main.rs"
+[lib]
+crate-type = ["staticlib", "cdylib", "lib"]
 
 [dependencies]
 clap = "2.33"
