@@ -24,7 +24,7 @@ pub mod general {
     }
 
     impl CoreVpnClient {
-         pub async fn start(&mut self, sock: UdpSocket, dev_reader: DeviceReader, dev_writer: DeviceWriter) {
+         pub async fn start(&mut self, sock: UdpSocket, dev_reader: DeviceReader, dev_writer: DeviceWriter, mtu: u16) {
             info!("Starting client...");
     
             let dr_cancel: CancellationToken = CancellationToken::new();
@@ -58,7 +58,7 @@ pub mod general {
             let mut buf1 = vec![0; 4096]; // should be changed to less bytes
 
             tokio::spawn(async move {
-                let mut buf = vec![0; 1400]; // mtu
+                let mut buf = vec![0; mtu.into()]; // mtu
                 loop {
                     match dev_reader.read(&mut buf).await {
                         Ok(n) => {
@@ -199,7 +199,6 @@ pub mod desktop {
     use frida_core::device::AbstractDevice;
     use log::info;
     use tokio::net::UdpSocket;
-    use tokio::sync::Mutex;
 
     #[cfg(target_os = "linux")]
     use network_interface::{NetworkInterface, NetworkInterfaceConfig};
@@ -272,10 +271,11 @@ pub mod desktop {
             info!("s_interface: {:?}", &self.s_interface);
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = AbstractDevice::default();
+            let mtu: u16 = 1400;
             config.address(self.client_config.client.address.parse().unwrap())
                 .netmask(Ipv4Addr::new(255, 255, 255, 255))
                 .destination(Ipv4Addr::new(10, 66, 66, 1))
-                .mtu(1400)
+                .mtu(mtu)
                 .tun_name("tun0");
         
             info!("SSS: {:?}", &self.client_config.server.endpoint);
@@ -293,7 +293,7 @@ pub mod desktop {
                 configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
             }*/
             
-            client.start(sock, dev_reader, dev_writer).await;
+            client.start(sock, dev_reader, dev_writer, mtu).await;
         }
     }
 }
