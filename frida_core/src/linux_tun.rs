@@ -9,7 +9,7 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
         Tun::builder()
             .name(&cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
-            .mtu(cfg.mtu.unwrap())
+            .mtu(cfg.mtu.unwrap().into())
             .address(cfg.address.unwrap())
             .netmask(cfg.netmask.unwrap())
             .destination(cfg.destination.unwrap())

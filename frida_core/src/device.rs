@@ -1,27 +1,27 @@
 
-use std::net::IpAddr;
+use std::net::Ipv4Addr;
 
 #[derive(Default)]
 pub struct AbstractDevice {
-    pub(crate) address: Option<IpAddr>,
-    pub(crate) netmask: Option<IpAddr>,
-    pub(crate) destination: Option<IpAddr>,
+    pub(crate) address: Option<Ipv4Addr>,
+    pub(crate) netmask: Option<Ipv4Addr>,
+    pub(crate) destination: Option<Ipv4Addr>,
     pub(crate) mtu: Option<u16>,
     pub(crate) tun_name: Option<String>
 }
 
 impl AbstractDevice {
-    pub fn address(&mut self, address: IpAddr) -> &mut Self {
+    pub fn address(&mut self, address: Ipv4Addr) -> &mut Self {
         self.address = Some(address);
         self
     }
 
-    pub fn netmask(&mut self, netmask: IpAddr) -> &mut Self {
+    pub fn netmask(&mut self, netmask: Ipv4Addr) -> &mut Self {
         self.netmask = Some(netmask);
         self
     }
 
-    pub fn destination(&mut self, destination: IpAddr) -> &mut Self {
+    pub fn destination(&mut self, destination: Ipv4Addr) -> &mut Self {
         self.destination = Some(destination);
         self
     }

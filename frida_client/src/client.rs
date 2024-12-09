@@ -273,8 +273,8 @@ pub mod desktop {
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = AbstractDevice::default();
             config.address(self.client_config.client.address.parse().unwrap())
-                .netmask(std::net::IpAddr::V4(Ipv4Addr::new(255, 255, 255, 255)))
-                .destination(std::net::IpAddr::V4(Ipv4Addr::new(10, 66, 66, 1)))
+                .netmask(Ipv4Addr::new(255, 255, 255, 255))
+                .destination(Ipv4Addr::new(10, 66, 66, 1))
                 .mtu(1400)
                 .tun_name("tun0");
         
