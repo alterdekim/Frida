@@ -1,5 +1,5 @@
 [package]
-name = "frida-client"
+name = "frida_client"
 version = "0.2.0"
 edition = "2021"
 license-file = "../LICENSE.md"
@@ -9,7 +9,7 @@ categories = ["network-programming", "asynchronous"]
 readme = "../README.md"
 
 [[bin]]
-name = "frida-client"
+name = "frida_client"
 path = "src/client.rs"
 
 [dependencies]
