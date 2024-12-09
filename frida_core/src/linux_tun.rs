@@ -8,7 +8,7 @@ use crate::device::AbstractDevice;
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
         Tun::builder()
-            .name(cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
+            .name(&cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
             .mtu(cfg.mtu.unwrap())
             .address(cfg.address.unwrap())
             .netmask(cfg.netmask.unwrap())
