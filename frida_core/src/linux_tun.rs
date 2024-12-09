@@ -11,7 +11,7 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
             .name(&cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
             .mtu(cfg.mtu.unwrap().into())
             .address(cfg.address.unwrap())
-            .netmask("0.0.0.0".parse())
+            .netmask("0.0.0.0".parse().unwrap())
             .destination(cfg.destination.unwrap())
             .up()                // or set it up manually using `sudo ip link set <tun-name> up`.
             .try_build()         // or `.try_build_mq(queues)` for multi-queue support.
