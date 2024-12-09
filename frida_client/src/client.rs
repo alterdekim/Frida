@@ -192,6 +192,8 @@ pub mod android {
 pub mod desktop {
     use crate::client::general::{CoreVpnClient, DevReader, DevWriter, VpnClient};
     use crate::config::ClientConfiguration;
+    use frida_core::create;
+    use frida_core::device::AbstractDevice;
     use futures::{SinkExt, StreamExt};
     use log::info;
     use tokio::net::UdpSocket;
@@ -267,7 +269,7 @@ pub mod desktop {
         async fn start(&self) {
             info!("s_interface: {:?}", &self.s_interface);
             info!("client_address: {:?}", &self.client_config.client.address);
-            let mut config = Configuration::default();
+            let mut config = AbstractDevice::default();
             config.address(&self.client_config.client.address)
                 .netmask("255.255.255.255")
                 .destination("10.66.66.1")
@@ -279,7 +281,7 @@ pub mod desktop {
             let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
 
-            let dev = create_as_async(&config).unwrap();
+            let dev = create(&config).unwrap();
             let (mut dev_writer , mut dev_reader) = dev.into_framed().split();
 
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer }, close_token: tokio_util::sync::CancellationToken::new()};

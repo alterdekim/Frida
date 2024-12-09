@@ -4,7 +4,7 @@ use tokio_tun::Tun;
 use std::net::Ipv4Addr;
 use std::os::unix::io::AsRawFd;
 
-pub fn create() -> (DeviceReader, DeviceWriter) {
+pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
         Tun::builder()
             .name("")            // if name is empty, then it is set by kernel.

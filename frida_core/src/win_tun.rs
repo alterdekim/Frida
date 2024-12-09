@@ -3,7 +3,9 @@ use wintun::Session;
 use std::sync::Arc;
 use std::error::Error;
 
-pub fn create() -> (DeviceReader, DeviceWriter) {
+use crate::device::AbstractDevice;
+
+pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     //Unsafe because we are loading an arbitrary dll file
     let wintun = unsafe { wintun::load_from_path("wintun.dll") }
     .expect("Failed to load wintun dll");

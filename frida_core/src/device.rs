@@ -1,31 +1,38 @@
 
+use std::net::IpAddr;
+
 #[derive(Default)]
 pub struct AbstractDevice {
-    address: String,
-    netmask: String,
-    destination: String,
-    mtu: u16,
-    tun_name: String
+    address: Option<IpAddr>,
+    netmask: Option<IpAddr>,
+    destination: Option<IpAddr>,
+    mtu: Option<u16>,
+    tun_name: Option<String>
 }
 
 impl AbstractDevice {
-    fn address(&mut self, address: String) {
-        self.address = address;
+    pub fn address(&mut self, address: IpAddr) -> &mut Self {
+        self.address = Some(address);
+        self
     }
 
-    fn netmask(&mut self, netmask: String) {
-        self.netmask = netmask;
+    pub fn netmask(&mut self, netmask: IpAddr) -> &mut Self {
+        self.netmask = Some(netmask);
+        self
     }
 
-    fn destination(&mut self, destination: String) {
-        self.destination = destination;
+    pub fn destination(&mut self, destination: IpAddr) -> &mut Self {
+        self.destination = Some(destination);
+        self
     }
 
-    fn mtu(&mut self, mtu: u16) {
-        self.mtu = mtu;
+    pub fn mtu(&mut self, mtu: u16) -> &mut Self {
+        self.mtu = Some(mtu);
+        self
     }
 
-    fn tun_name(&mut self, tun_name: String) {
-        self.tun_name = tun_name;
+    pub fn tun_name<S: AsRef<str>>(&mut self, tun_name: S) -> &mut Self {
+        self.tun_name = Some(tun_name.as_ref().into());
+        self
     }
 }
