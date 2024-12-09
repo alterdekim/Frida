@@ -3,11 +3,11 @@ use std::net::IpAddr;
 
 #[derive(Default)]
 pub struct AbstractDevice {
-    address: Option<IpAddr>,
-    netmask: Option<IpAddr>,
-    destination: Option<IpAddr>,
-    mtu: Option<u16>,
-    tun_name: Option<String>
+    pub(crate) address: Option<IpAddr>,
+    pub(crate) netmask: Option<IpAddr>,
+    pub(crate) destination: Option<IpAddr>,
+    pub(crate) mtu: Option<u16>,
+    pub(crate) tun_name: Option<String>
 }
 
 impl AbstractDevice {

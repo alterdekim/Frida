@@ -1,5 +1,8 @@
 pub mod device;
 pub mod tun;
+pub mod obfs;
+pub mod udp;
+pub mod config;
 
 #[cfg(target_os = "windows")]
 mod win_tun;

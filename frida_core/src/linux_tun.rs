@@ -7,9 +7,11 @@ use std::os::unix::io::AsRawFd;
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
         Tun::builder()
-            .name("")            // if name is empty, then it is set by kernel.
-            .tap()               // uses TAP instead of TUN (default).
-            .packet_info()       // avoids setting IFF_NO_PI.
+            .name(cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
+            .mtu(cfg.mtu.unwrap())
+            .address(cfg.address.unwrap())
+            .netmask(cfg.netmask.unwrap())
+            .destination(cfg.destination.unwrap())
             .up()                // or set it up manually using `sudo ip link set <tun-name> up`.
             .try_build()         // or `.try_build_mq(queues)` for multi-queue support.
             .unwrap(),

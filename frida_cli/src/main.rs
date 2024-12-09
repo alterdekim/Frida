@@ -1,16 +1,12 @@
 
 use std::{fs, net::{Ipv4Addr}, str};
-use clap::{App, Arg, ArgMatches};
+use clap::{crate_authors, crate_name, crate_version, App, Arg, ArgMatches};
 use env_logger::Builder;
 use log::{error, LevelFilter};
-use crate::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
-use crate::client::{desktop::DesktopClient, general::VpnClient};
+use frida_core::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
+use frida_client::client::{desktop::DesktopClient, general::VpnClient};
 
-mod obfs;
-mod server;
-mod client;
-mod udp;
-mod config;
+//mod server;
 
 fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let bind_address = matches.value_of("bind-address").expect("No bind address specified");
@@ -62,7 +58,7 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
 
 async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
     let config: ServerConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad server config file structure");
-    server::server_mode(config, s_interface).await;
+    //server::server_mode(config, s_interface).await;
 }
 
 async fn init_client(cfg_raw: &str, s_interface: Option<String>) {
@@ -74,16 +70,14 @@ async fn init_client(cfg_raw: &str, s_interface: Option<String>) {
 
 #[tokio::main]
 async fn main() {
-    //console_subscriber::init();
-
     // Initialize the logger with 'info' as the default level
     Builder::new()
         .filter(None, LevelFilter::Info)
         .init();
 
-    let matches = App::new("Frida")
-        .version("0.1.2")
-        .author("alterwain")
+    let matches = App::new(crate_name!())
+        .version(crate_version!())
+        .author(crate_authors!())
         .about("VPN software")
         .arg(Arg::with_name("mode")
             .required(true)

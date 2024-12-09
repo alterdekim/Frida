@@ -1,7 +1,5 @@
 pub mod general {
-    use crate::config::ClientConfiguration;
-    use async_channel::{Receiver, Sender};
-    use futures::{stream::{SplitSink, SplitStream}, SinkExt, StreamExt};
+    use frida_core::config::ClientConfiguration;
     use tokio_util::{codec::Framed, sync::CancellationToken};
     use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{AsyncWriteExt, AsyncReadExt}, fs::File};
     use log::{error, info, warn};
@@ -13,9 +11,7 @@ pub mod general {
     use std::net::Ipv4Addr;
     
     use x25519_dalek::{PublicKey, StaticSecret};
-    use crate::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
-
-    use frida_core::tun::create_tun;
+    use frida_core::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
     use frida_core::{DeviceReader, DeviceWriter};
 
     pub trait VpnClient {
@@ -24,13 +20,11 @@ pub mod general {
     
     pub struct CoreVpnClient {
         pub client_config: ClientConfiguration,
-        pub dev_reader: DeviceReader,
-        pub dev_writer: DeviceWriter,
         pub close_token: CancellationToken
     }
 
     impl CoreVpnClient {
-         pub async fn start(&mut self, sock: UdpSocket) {
+         pub async fn start(&mut self, sock: UdpSocket, dev_reader: DeviceReader, dev_writer: DeviceWriter) {
             info!("Starting client...");
     
             let dr_cancel: CancellationToken = CancellationToken::new();
@@ -59,10 +53,22 @@ pub mod general {
         
             let s_cipher = cipher_shared.clone();
     
-            let _ = self.dev_writer.write(handshake.serialize()).await;
+            let _ = dev_writer.write(&handshake.serialize()).await;
     
-            let mut buf = vec![0; 1400]; // mtu
             let mut buf1 = vec![0; 4096]; // should be changed to less bytes
+
+            tokio::spawn(async move {
+                let mut buf = vec![0; 1400]; // mtu
+                loop {
+                    match dev_reader.read(&mut buf).await {
+                        Ok(n) => {
+                            info!("Read from tun."); // hex::encode(&buf[..n])
+                            dx.send(buf[..n].to_vec()).unwrap();
+                        },
+                        Err(e) => { error!("{}", e); }
+                    }
+                }
+            });
 
             loop {
                 tokio::select! {
@@ -76,7 +82,7 @@ pub mod general {
                         if let Some(bytes) = rr {
                             info!("Write to tun. len={:?}", bytes.len());
                             
-                            if let Err(e) = self.dev_writer.write(&bytes).await {
+                            if let Err(e) = dev_writer.write(&bytes).await {
                                 error!("Writing error: {:?}", e);
                             }
                            /* if let Err(e) = self.dev_writer.flush().await {
@@ -86,6 +92,7 @@ pub mod general {
                     }
                     rr2 = mx.recv() => {
                         if let Some(bytes) = rr2 {
+                            info!("Got info for sending");
                             let s_c = s_cipher.lock().await;
                             
                             if s_c.is_some() {
@@ -104,12 +111,6 @@ pub mod general {
                             } else {
                                 error!("There is no shared_secret in main loop");
                             }
-                        }
-                    }
-                    rr = self.dev_reader.read(&mut buf) => {
-                        if let Ok(n) = rr {
-                            info!("Read from tun."); // hex::encode(&buf[..n])
-                            dx.send(buf[..n].to_vec()).unwrap();
                         }
                     }
                     rr = sock_rec.recv(&mut buf1) => {
@@ -190,11 +191,12 @@ pub mod android {
 }
 
 pub mod desktop {
-    use crate::client::general::{CoreVpnClient, DevReader, DevWriter, VpnClient};
-    use crate::config::ClientConfiguration;
-    use frida_core::create;
+    use std::net::Ipv4Addr;
+
+    use crate::client::general::{CoreVpnClient, VpnClient};
+    use frida_core::config::ClientConfiguration;
+    use frida_core::tun::create_tun;
     use frida_core::device::AbstractDevice;
-    use futures::{SinkExt, StreamExt};
     use log::info;
     use tokio::net::UdpSocket;
     use tokio::sync::Mutex;
@@ -270,21 +272,19 @@ pub mod desktop {
             info!("s_interface: {:?}", &self.s_interface);
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = AbstractDevice::default();
-            config.address(&self.client_config.client.address)
-                .netmask("255.255.255.255")
-                .destination("10.66.66.1")
+            config.address(self.client_config.client.address.parse().unwrap())
+                .netmask(std::net::IpAddr::V4(Ipv4Addr::new(255, 255, 255, 255)))
+                .destination(std::net::IpAddr::V4(Ipv4Addr::new(10, 66, 66, 1)))
                 .mtu(1400)
-                .tun_name("tun0")
-                .up();
+                .tun_name("tun0");
         
             info!("SSS: {:?}", &self.client_config.server.endpoint);
             let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
 
-            let dev = create(&config).unwrap();
-            let (mut dev_writer , mut dev_reader) = dev.into_framed().split();
+            let (dev_reader, dev_writer) = create_tun(config);
 
-            let mut client = CoreVpnClient{ client_config: self.client_config.clone(), dev_reader: DevReader{ dr: dev_reader }, dev_writer: DevWriter{dr: dev_writer }, close_token: tokio_util::sync::CancellationToken::new()};
+            let mut client = CoreVpnClient{ client_config: self.client_config.clone(), close_token: tokio_util::sync::CancellationToken::new()};
            
             info!("Platform specific code");
            /* #[cfg(target_os = "linux")]
@@ -293,7 +293,7 @@ pub mod desktop {
                 configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
             }*/
             
-            client.start(sock).await;
+            client.start(sock, dev_reader, dev_writer).await;
         }
     }
 }

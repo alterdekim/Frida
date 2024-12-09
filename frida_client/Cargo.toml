@@ -8,9 +8,8 @@ keywords = ["tun", "network", "tunnel", "vpn"]
 categories = ["network-programming", "asynchronous"]
 readme = "../README.md"
 
-[[bin]]
-name = "frida_client"
-path = "src/client.rs"
+[lib]
+crate-type = ["staticlib", "cdylib", "lib"]
 
 [dependencies]
 frida_core = { path = "../frida_core", package = "frida_core" }
