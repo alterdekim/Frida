@@ -1668,6 +1668,7 @@ dependencies = [
  "env_logger",
  "frida_core",
  "log",
+ "network-interface",
  "tokio 1.42.0",
  "tokio-util",
  "x25519-dalek",
