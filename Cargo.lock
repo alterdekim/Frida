@@ -1644,10 +1644,12 @@ version = "0.2.0"
 name = "frida_lib"
 version = "0.2.0"
 dependencies = [
+ "env_logger",
  "frida_client",
  "frida_core",
  "hex",
  "jni 0.20.0",
+ "log",
  "log4rs",
  "nonblock",
  "robusta_jni",

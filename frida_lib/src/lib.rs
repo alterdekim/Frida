@@ -8,10 +8,6 @@ use robusta_jni::jni::JNIEnv;
 use std::fs::File;
 use std::io::Write;
 
-mod config;
-mod client;
-mod udp;
-
 static TUN_QUIT: std::sync::Mutex<Option<tokio_util::sync::CancellationToken>> = std::sync::Mutex::new(None);
 
 #[bridge]
@@ -27,9 +23,9 @@ mod jni {
     use robusta_jni::jni::errors::Result as JniResult;
     use robusta_jni::jni::objects::AutoLocal;
     use robusta_jni::jni::JNIEnv;
-    use crate::config::ClientConfiguration;
-    use crate::client::android::AndroidClient;
-    use crate::client::general::VpnClient;
+    use frida_core::config::ClientConfiguration;
+    use frida_client::client::android::AndroidClient;
+    use frida_client::client::general::VpnClient;
     use crate::TUN_QUIT;
     use std::fs::File;
 
