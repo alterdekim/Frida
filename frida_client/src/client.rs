@@ -205,15 +205,17 @@ pub mod desktop {
 
 
     #[cfg(target_os = "linux")]
-    fn configure_routes(endpoint_ip: &str, s_interface: Option<String>) {
+    fn configure_routes(endpoint_ip: &str) {
         let interfaces = NetworkInterface::show().unwrap();
     
         let net_inter = interfaces.iter()
             .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
             .min_by(|x, y| x.index.cmp(&y.index))
             .unwrap();
-    
-        let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { net_inter.name.clone() };
+        
+        info!("Main interface: {:?}", net_inter);
+
+        let inter_name = net_inter.name.clone();
     
         info!("Main network interface: {:?}", inter_name);
         
@@ -281,13 +283,11 @@ pub mod desktop {
     }
 
     pub struct DesktopClient {
-        pub client_config: ClientConfiguration,
-        pub s_interface: Option<String>
+        pub client_config: ClientConfiguration
     }
     
     impl VpnClient for DesktopClient {
         async fn start(&self) {
-            info!("s_interface: {:?}", &self.s_interface);
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = AbstractDevice::default();
             let mtu: u16 = 1400;
@@ -309,7 +309,7 @@ pub mod desktop {
             #[cfg(target_os = "linux")]
             {
                 let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
-                configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
+                configure_routes(&s_a.ip().to_string());
             }
             
             client.start(sock, dev_reader, dev_writer, mtu).await;

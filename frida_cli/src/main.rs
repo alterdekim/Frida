@@ -61,10 +61,10 @@ async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
     //server::server_mode(config, s_interface).await;
 }
 
-async fn init_client(cfg_raw: &str, s_interface: Option<String>) {
+async fn init_client(cfg_raw: &str) {
     let config: ClientConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad client config file structure");
     //client::client_mode(config, s_interface).await;
-    let client = DesktopClient{client_config: config, s_interface};
+    let client = DesktopClient{client_config: config};
     client.start().await;
 }
 
@@ -157,7 +157,7 @@ async fn main() {
 
         match mode {
             "server" => init_server(cfg_raw, matches.value_of("interface")).await,
-            "client" => init_client(cfg_raw, matches.value_of("interface").map_or(None, |x| Some(String::from(x)))).await,
+            "client" => init_client(cfg_raw),
             "new_peer" => generate_peer_config(&matches, config_path, cfg_raw),
             _ => error!("There is config file already")
         }
