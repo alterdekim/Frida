@@ -1,7 +1,7 @@
 use std::process::Command;
 use std::sync::Arc;
-use tun_tap::{Iface, Mode};
 use std::error::Error;
+use nix::sys::socket::socket;
 
 use crate::device::AbstractDevice;
 
@@ -16,7 +16,7 @@ fn cmd(cmd: &str, args: &[&str]) {
 }
 
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
-    let iface = Iface::new("utun10", Mode::Tun).unwrap();
+    /*let iface = Iface::new("utun10", Mode::Tun).unwrap();
 
     let mut address = cfg.address.unwrap().to_string();
     address.push_str("/24");
@@ -28,7 +28,9 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let writer = Arc::clone(&iface);
     let reader = Arc::clone(&iface);
 
-    (DeviceReader {reader}, DeviceWriter {writer})
+    (DeviceReader {reader}, DeviceWriter {writer})*/
+
+
 }
 
 pub struct DeviceWriter {
