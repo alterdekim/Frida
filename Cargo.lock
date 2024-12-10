@@ -1620,14 +1620,10 @@ dependencies = [
  "generic-array",
  "hex",
  "iced",
- "jni 0.20.0",
  "log",
- "log4rs",
  "nix",
- "nonblock",
  "packet",
  "rand",
- "robusta_jni",
  "serde",
  "serde_derive",
  "serde_yaml",
@@ -1647,6 +1643,20 @@ version = "0.2.0"
 [[package]]
 name = "frida_lib"
 version = "0.2.0"
+dependencies = [
+ "frida_client",
+ "frida_core",
+ "hex",
+ "jni 0.20.0",
+ "log4rs",
+ "nonblock",
+ "robusta_jni",
+ "serde",
+ "serde_derive",
+ "serde_yaml",
+ "tokio",
+ "tokio-util",
+]
 
 [[package]]
 name = "frida_server"

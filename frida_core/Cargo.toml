@@ -49,9 +49,3 @@ nix = { version = "0.29.0", features = ["socket"] }
 
 [target.'cfg(target_os="linux")'.dependencies]
 tokio-tun = "0.12.1"
-
-[target.'cfg(target_os="android")'.dependencies]
-jni = "^0.20"
-robusta_jni = "0.2.2"
-nonblock = "0.2.0"
-log4rs = "1.3.0"
