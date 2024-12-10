@@ -58,14 +58,14 @@ pub mod general {
             let mut buf1 = vec![0; 4096]; // should be changed to less bytes
 
             tokio::spawn(async move {
-                let mut buf = vec![0; mtu.into()]; // mtu
+                let mut buf = vec![0; mtu.into()];
                 loop {
                     match dev_reader.read(&mut buf).await {
                         Ok(n) => {
-                            info!("Read from tun."); // hex::encode(&buf[..n])
+                            //info!("Read from tun.");
                             dx.send(buf[..n].to_vec()).unwrap();
                         },
-                        Err(e) => { error!("Read failed {}", e); }
+                        Err(_e) => { /*error!("Read failed {}", e);*/ }
                     }
                 }
             });
@@ -80,19 +80,16 @@ pub mod general {
                     }
                     rr = rx.recv() => {
                         if let Some(bytes) = rr {
-                            info!("Write to tun. len={:?}", bytes.len());
+                            //info!("Write to tun. len={:?}", bytes.len());
                             
                             if let Err(e) = dev_writer.write(&bytes).await {
-                                error!("Writing error: {:?}", e);
+                                //error!("Writing error: {:?}", e);
                             }
-                           /* if let Err(e) = self.dev_writer.flush().await {
-                                error!("Flushing error: {:?}", e);
-                            }*/
                         }
                     }
                     rr2 = mx.recv() => {
                         if let Some(bytes) = rr2 {
-                            info!("Got info for sending");
+                            //info!("Got info for sending");
                             let s_c = s_cipher.lock().await;
                             
                             if s_c.is_some() {
@@ -115,7 +112,7 @@ pub mod general {
                     }
                     rr = sock_rec.recv(&mut buf1) => {
                         if let Ok(l) = rr {
-                            info!("Read from socket");
+                            //info!("Read from socket");
                             let mut s_cipher = cipher_shared_clone.lock().await;
                             match buf1.first() {
                                 Some(h) => {

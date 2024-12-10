@@ -10,14 +10,6 @@ use libc::fdopen;
 use std::ffi::CString;
 
 pub fn create(cfg: i32) -> (DeviceReader, DeviceWriter) {
-    // check this if android build won't work
-    /*let mode_read = CString::new("r").unwrap();
-    let mode_write = CString::new("w").unwrap();
-    let fd1 = cfg.clone();
-    let fd2 = fd1.clone();
-    let reader = unsafe { fdopen(fd1, mode_read.as_ptr()) };
-    let writer = unsafe { fdopen(fd2, mode_write.as_ptr()) };*/
-
     let fd1 = cfg.clone();
     let fd2 = fd1.clone();
     let mut reader = unsafe { File::from_raw_fd(fd1) };

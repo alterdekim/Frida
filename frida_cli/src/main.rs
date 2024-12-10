@@ -6,8 +6,6 @@ use log::{error, LevelFilter};
 use frida_core::config::{ ServerConfiguration, ClientConfiguration, ObfsProtocol, ServerPeer };
 use frida_client::client::{desktop::DesktopClient, general::VpnClient};
 
-//mod server;
-
 fn generate_server_config(matches: &ArgMatches, config_path: &str) {
     let bind_address = matches.value_of("bind-address").expect("No bind address specified");
     let internal_address = matches.value_of("internal-address").expect("No internal address specified");
@@ -63,7 +61,6 @@ async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
 
 async fn init_client(cfg_raw: &str) {
     let config: ClientConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad client config file structure");
-    //client::client_mode(config, s_interface).await;
     let client = DesktopClient{client_config: config};
     client.start().await;
 }
