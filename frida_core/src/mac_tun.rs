@@ -38,16 +38,16 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let fd = fd.unwrap();
 
     let mut info: ctl_info = unsafe { std::mem::zeroed() };
-    let ctl_name = CString::new("com.apple.utun.control").unwrap();
+    let ctl_name = CString::new("com.apple.net.utun_control").unwrap();
     ctl_name.as_bytes_with_nul()
         .iter()
         .enumerate()
         .for_each(|(i, &c)| info.ctl_name[i] = c as i8);
 
-    /*if */unsafe { nix::libc::ioctl(fd.as_raw_fd(), CTLIOCGINFO, &mut info) }; /*  < 0 {*/
-    //    let err = Errno::last();
-     //   panic!("ioctl CTLIOCGINFO failed: {}", err);
-    //}
+    if unsafe { nix::libc::ioctl(fd.as_raw_fd(), CTLIOCGINFO, &mut info) } < 0 {
+        let err = Errno::last();
+        panic!("ioctl CTLIOCGINFO failed: {}", err);
+    }
 
     let mut sc = sockaddr_ctl {
         sc_len: std::mem::size_of::<sockaddr_ctl>() as u8,
