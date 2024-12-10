@@ -195,7 +195,7 @@ pub mod desktop {
 
     use crate::client::general::{CoreVpnClient, VpnClient};
     use frida_core::config::ClientConfiguration;
-    use frida_core::tun::create_tun;
+    use frida_core::create;
     use frida_core::device::AbstractDevice;
     use log::info;
     use tokio::net::UdpSocket;
@@ -320,7 +320,7 @@ pub mod desktop {
             let sock = UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
 
-            let (dev_reader, dev_writer) = create_tun(config);
+            let (dev_reader, dev_writer) = create(config);
 
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), close_token: tokio_util::sync::CancellationToken::new()};
            

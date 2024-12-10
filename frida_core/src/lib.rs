@@ -1,5 +1,4 @@
 pub mod device;
-pub mod tun;
 pub mod obfs;
 pub mod udp;
 pub mod config;
@@ -21,3 +20,9 @@ mod mac_tun;
 
 #[cfg(target_os = "macos")]
 pub use r#mac_tun::*;
+
+#[cfg(target_os = "android")]
+mod android_tun;
+
+#[cfg(target_os = "android")]
+pub use r#android_tun::*;
