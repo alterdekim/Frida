@@ -218,19 +218,19 @@ pub mod desktop {
             log::error!("Failed to execute ip route command: {:?}", String::from_utf8_lossy(&if_out.stderr));
         }
         
-        let r = if_out.stdout;
+        let r = String::from(if_out.stdout);
 
         let gateway = None;
         let if_name = None;
 
         let rg = Regex::new(r"default via .+ dev ").unwrap();
     
-        if let Some(m) = rg.find(r) { // gateway
+        if let Some(m) = rg.find(&r) { // gateway
             gateway = Some(&m.as_str()[12..m.len()-4]);
         }
     
         let rg = Regex::new(r"dev .+ proto").unwrap();
-        if let Some(m) = rg.find(r) { // name
+        if let Some(m) = rg.find(&r) { // name
             if_name = Some(&m.as_str()[4..m.len()-6]);
         }
         
