@@ -218,7 +218,7 @@ pub mod desktop {
             log::error!("Failed to execute ip route command: {:?}", String::from_utf8_lossy(&if_out.stderr));
         }
         
-        let r = str::from_utf8(if_out.stdout).unwrap();
+        let r = std::str::from_utf8(if_out.stdout).unwrap();
 
         let gateway = None;
         let if_name = None;
