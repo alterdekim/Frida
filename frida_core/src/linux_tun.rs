@@ -18,7 +18,7 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
             .unwrap(),
     );
 
-    println!("tun created, name: {}, fd: {}", tun.name(), tun.as_raw_fd());
+    info!("tun created, name: {}, fd: {}", tun.name(), tun.as_raw_fd());
 
     let tun_writer = tun.clone();
 
