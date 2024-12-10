@@ -220,8 +220,8 @@ pub mod desktop {
         
         let r = std::str::from_utf8(&if_out.stdout).unwrap();
 
-        let gateway = None;
-        let if_name = None;
+        let mut gateway = None;
+        let mut if_name = None;
 
         let rg = Regex::new(r"default via .+ dev ").unwrap();
     
