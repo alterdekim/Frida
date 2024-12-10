@@ -18,7 +18,7 @@ fn cmd(cmd: &str, args: &[&str]) {
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let iface = Iface::new("tun%d", Mode::Tun).unwrap();
 
-    let address = cfg.address.unwrap().to_string();
+    let mut address = cfg.address.unwrap().to_string();
     address.push_str("/24");
 
     cmd("ip", &["addr", "add", "dev", iface.name(), &address]);
@@ -41,12 +41,12 @@ pub struct DeviceReader {
 
 impl DeviceWriter {
     pub async fn write(&self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        self.writer.send(buf)
+        Ok(self.writer.send(buf)?)
     }
 }
 
 impl DeviceReader {
     pub async fn read(&self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        self.reader.recv(buf)
+        Ok(self.reader.recv(buf)?)
     }
 }
