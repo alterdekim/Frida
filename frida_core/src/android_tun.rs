@@ -10,7 +10,7 @@ pub fn create(cfg: i32) -> (DeviceReader, DeviceWriter) {
     let mut reader = unsafe { File::from_raw_fd(fd1) };
     //let mut writer = unsafe { File::from_raw_fd(fd2) };
     
-    (DeviceReader {reader}, DeviceWriter {None})
+    (DeviceReader {reader}, DeviceWriter {writer: None})
 }
 
 pub struct DeviceWriter {
