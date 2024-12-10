@@ -4,6 +4,7 @@ use std::error::Error;
 use std::os::fd::FromRawFd;
 
 use std::fs::File;
+use std::io::{Write, Read};
 
 use libc::fdopen;
 use std::ffi::CString;
