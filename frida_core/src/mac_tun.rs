@@ -1,6 +1,7 @@
 use std::process::Command;
 use std::sync::Arc;
 use tun_tap::{Iface, Mode};
+use std::error::Error;
 
 use crate::device::AbstractDevice;
 
