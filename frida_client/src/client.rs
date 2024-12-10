@@ -201,34 +201,54 @@ pub mod desktop {
     use tokio::net::UdpSocket;
 
     #[cfg(target_os = "linux")]
-    use network_interface::{NetworkInterface, NetworkInterfaceConfig};
+    use regex::Regex;
 
 
     #[cfg(target_os = "linux")]
     fn configure_routes(endpoint_ip: &str) {
-        let interfaces = NetworkInterface::show().unwrap();
-    
-        let net_inter = interfaces.iter()
-            .filter(|i| !i.addr.iter().any(|b| b.ip().to_string() == "127.0.0.1" || b.ip().to_string() == "::1") )
-            .min_by(|x, y| x.index.cmp(&y.index))
-            .unwrap();
-        
-        info!("Main interface: {:?}", net_inter);
+        let mut if_out = std::process::Command::new("ip")
+            .arg("-4")
+            .arg("route")
+            .arg("show")
+            .arg("default")
+            .output()
+            .expect("Failed to get default route");
 
-        let inter_name = net_inter.name.clone();
-    
-        info!("Main network interface: {:?}", inter_name);
+        if !if_out.status.success() {
+            log::error!("Failed to execute ip route command: {:?}", String::from_utf8_lossy(&if_out.stderr));
+        }
         
-        /*
+        let r = if_out.stdout;
+
+        let gateway = None;
+        let if_name = None;
+
+        let rg = Regex::new(r"default via .+ dev ").unwrap();
+    
+        if let Some(m) = rg.find(r) { // gateway
+            gateway = Some(&m.as_str()[12..m.len()-4]);
+        }
+    
+        let rg = Regex::new(r"dev .+ proto").unwrap();
+        if let Some(m) = rg.find(r) { // name
+            if_name = Some(&m.as_str()[4..m.len()-6]);
+        }
+        
+        info!("Main interface: {:?}", &if_name.unwrap());
+
+        let inter_name = if_name.unwrap();
+    
+        info!("Main network interface: {:?}", &gateway.unwrap());
+        
         let mut ip_output = std::process::Command::new("sudo")
             .arg("route")
             .arg("add")
             .arg("-host")
             .arg(endpoint_ip)
             .arg("gw")
-            .arg() // default interface gateway
+            .arg(&gateway.unwrap()) // default interface gateway
             .arg("dev")
-            .arg() // default interface
+            .arg(&inter_name) // default interface
             .output()
             .expect("Failed to execute route command.");
     
@@ -242,7 +262,7 @@ pub mod desktop {
             .arg("add")
             .arg("0.0.0.0/0")
             .arg("dev")
-            .arg() // tun adapter name
+            .arg("tun0") // tun adapter name
             .output()
             .expect("Failed to execute ip route command.");
 
@@ -256,7 +276,7 @@ pub mod desktop {
             .arg("add")
             .arg("128.0.0.0/1")
             .arg("dev")
-            .arg() // tun adapter name
+            .arg("tun0") // tun adapter name
             .output()
             .expect("Failed to execute ip route command.");
 
@@ -270,16 +290,15 @@ pub mod desktop {
             .arg("-host")
             .arg(endpoint_ip)
             .arg("gw")
-            .arg() // default interface gateway
+            .arg(&gateway.unwrap()) // default interface gateway
             .arg("dev")
-            .arg() // default interface
+            .arg(&inter_name) // default interface
             .output()
             .expect("Failed to execute route command.");
     
         if !ip_output.status.success() {
             log::error!("Failed to execute route command: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
-        */
     }
 
     pub struct DesktopClient {

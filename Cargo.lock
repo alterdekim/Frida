@@ -1668,7 +1668,7 @@ dependencies = [
  "env_logger",
  "frida_core",
  "log",
- "network-interface",
+ "regex",
  "tokio 1.42.0",
  "tokio-util",
  "x25519-dalek",
@@ -1696,7 +1696,6 @@ dependencies = [
  "jni 0.20.0",
  "log",
  "log4rs",
- "network-interface",
  "nonblock",
  "packet",
  "rand",
@@ -2958,18 +2957,6 @@ checksum = "b13b648036a2339d06de780866fbdfda0dde886de7b3af2ddeba8b14f4ee34ac"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "network-interface"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "433419f898328beca4f2c6c73a1b52540658d92b0a99f0269330457e0fd998d5"
-dependencies = [
- "cc",
- "libc",
- "thiserror 1.0.69",
  "winapi 0.3.9",
 ]
 
