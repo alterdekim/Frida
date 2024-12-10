@@ -226,7 +226,7 @@ pub mod desktop {
         let rg = Regex::new(r"default via .+ dev ").unwrap();
     
         if let Some(m) = rg.find(r) { // gateway
-            gateway = Some(&m.as_str()[12..m.len()-4]);
+            gateway = Some(&m.as_str()[12..m.len()-5]);
         }
     
         let rg = Regex::new(r"dev .+ proto").unwrap();
