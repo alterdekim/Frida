@@ -216,49 +216,68 @@ pub mod desktop {
         let inter_name = if s_interface.is_some() { s_interface.unwrap() } else { net_inter.name.clone() };
     
         info!("Main network interface: {:?}", inter_name);
-    
-        /*let mut ip_output = std::process::Command::new("sudo")
-            .arg("ip")
+        
+        /*
+        let mut ip_output = std::process::Command::new("sudo")
             .arg("route")
-            .arg("del")
-            .arg("default")
+            .arg("add")
+            .arg("-host")
+            .arg(endpoint_ip)
+            .arg("gw")
+            .arg() // default interface gateway
+            .arg("dev")
+            .arg() // default interface
             .output()
-            .expect("Failed to delete default gateway.");
+            .expect("Failed to execute route command.");
     
         if !ip_output.status.success() {
-            error!("Failed to delete default gateway: {:?}", String::from_utf8_lossy(&ip_output.stderr));
-        }*/
-    
+            log::error!("Failed to execute route command: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        }
+
         let mut ip_output = std::process::Command::new("sudo")
             .arg("ip")
-            .arg("-4")
             .arg("route")
             .arg("add")
             .arg("0.0.0.0/0")
             .arg("dev")
-            .arg("tun0")
+            .arg() // tun adapter name
             .output()
             .expect("Failed to execute ip route command.");
-    
+
         if !ip_output.status.success() {
-            log::error!("Failed to route all traffic: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+            log::error!("Failed to execute ip route command: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
-        // TODO: replace 192.168.0.1 with relative variable
-        ip_output = std::process::Command::new("sudo")
+
+        let mut ip_output = std::process::Command::new("sudo")
             .arg("ip")
             .arg("route")
             .arg("add")
-            .arg(endpoint_ip.to_owned()+"/32")
-            .arg("via")
-            .arg("192.168.0.1")
+            .arg("128.0.0.0/1")
             .arg("dev")
-            .arg(inter_name)
+            .arg() // tun adapter name
             .output()
-            .expect("Failed to make exception for vpns endpoint.");
+            .expect("Failed to execute ip route command.");
+
+        if !ip_output.status.success() {
+            log::error!("Failed to execute ip route command: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+        }
+
+        let mut ip_output = std::process::Command::new("sudo")
+            .arg("route")
+            .arg("add")
+            .arg("-host")
+            .arg(endpoint_ip)
+            .arg("gw")
+            .arg() // default interface gateway
+            .arg("dev")
+            .arg() // default interface
+            .output()
+            .expect("Failed to execute route command.");
     
         if !ip_output.status.success() {
-            log::error!("Failed to forward packets: {:?}", String::from_utf8_lossy(&ip_output.stderr));
+            log::error!("Failed to execute route command: {:?}", String::from_utf8_lossy(&ip_output.stderr));
         }
+        */
     }
 
     pub struct DesktopClient {
@@ -287,11 +306,11 @@ pub mod desktop {
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), close_token: tokio_util::sync::CancellationToken::new()};
            
             info!("Platform specific code");
-           /* #[cfg(target_os = "linux")]
+            #[cfg(target_os = "linux")]
             {
                 let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
                 configure_routes(&s_a.ip().to_string(), self.s_interface.clone());
-            }*/
+            }
             
             client.start(sock, dev_reader, dev_writer, mtu).await;
         }
