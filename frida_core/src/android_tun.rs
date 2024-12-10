@@ -24,7 +24,7 @@ pub struct DeviceReader {
 impl DeviceWriter {
     pub async fn write(&mut self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
         if self.writer.is_some() {
-            return Ok(self.writer.write(buf).await?);
+            return Ok(self.writer.unwrap().write(buf).await?);
         }
         Ok(0)
     }
