@@ -179,7 +179,7 @@ pub mod android {
     impl VpnClient for AndroidClient {
         async fn start(&self) {
             info!("FD: {:?}", &self.fd);
-            let mtu: u16 = 1500;
+            let mtu: u16 = 1400;
             let (reader, writer) = frida_core::create(self.fd);
             let mut client = CoreVpnClient{client_config: self.client_config.clone(), close_token: self.close_token.clone()};
             info!("SSS: {:?}", &self.client_config.server.endpoint);
@@ -310,7 +310,7 @@ pub mod desktop {
         async fn start(&self) {
             info!("client_address: {:?}", &self.client_config.client.address);
             let mut config = AbstractDevice::default();
-            let mtu: u16 = 1500;
+            let mtu: u16 = 1400;
             config.address(self.client_config.client.address.parse().unwrap())
                 .netmask(Ipv4Addr::new(255, 255, 255, 255))
                 .destination(Ipv4Addr::new(10, 66, 66, 1))
