@@ -163,8 +163,8 @@ pub mod general {
 
 pub mod android {
     #![cfg(target_os = "android")]
-    use crate::client::general::{VpnClient, CoreVpnClient, FdReader, FdWriter};
-    use crate::config::ClientConfiguration;
+    use crate::client::general::{VpnClient, CoreVpnClient};
+    use frida_core::config::ClientConfiguration;
     use tokio_util::sync::CancellationToken;
     use std::os::fd::FromRawFd;
     use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{BufReader, BufWriter, AsyncWriteExt, AsyncReadExt}, fs::File};
@@ -181,7 +181,7 @@ pub mod android {
             info!("FD: {:?}", &self.fd);
             let mtu: u16 = 1500;
             let (reader, writer) = frida_core::create(self.fd);
-            let mut client = CoreVpnClient{client_config: self.client_config.clone(), dev_reader: FdReader{br: dev}, dev_writer: FdWriter{br: dev1}, close_token: self.close_token.clone()};
+            let mut client = CoreVpnClient{client_config: self.client_config.clone(), close_token: self.close_token.clone()};
             info!("SSS: {:?}", &self.client_config.server.endpoint);
             let sock = UdpSocket::bind("0.0.0.0:0").await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
@@ -191,6 +191,7 @@ pub mod android {
 }
 
 pub mod desktop {
+    #![cfg(not(target_os = "android"))]
     use std::net::Ipv4Addr;
 
     use crate::client::general::{CoreVpnClient, VpnClient};
