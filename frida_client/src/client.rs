@@ -65,7 +65,7 @@ pub mod general {
                             info!("Read from tun."); // hex::encode(&buf[..n])
                             dx.send(buf[..n].to_vec()).unwrap();
                         },
-                        Err(e) => { error!("{}", e); }
+                        Err(e) => { error!("Read failed {}", e); }
                     }
                 }
             });
