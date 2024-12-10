@@ -180,9 +180,9 @@ pub mod android {
         async fn start(&self) {
             info!("FD: {:?}", &self.fd);
             let mtu: u16 = 1400;
-            let (reader, writer) = frida_core::create(self.fd);
             let mut client = CoreVpnClient{client_config: self.client_config.clone(), close_token: self.close_token.clone()};
             info!("SSS: {:?}", &self.client_config.server.endpoint);
+            let (reader, writer) = frida_core::create(self.fd);
             let sock = UdpSocket::bind("0.0.0.0:0").await.unwrap();
             sock.connect(&self.client_config.server.endpoint).await.unwrap();
             client.start(sock, reader, writer, mtu).await;

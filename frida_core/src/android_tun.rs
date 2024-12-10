@@ -8,13 +8,13 @@ pub fn create(cfg: i32) -> (DeviceReader, DeviceWriter) {
     let fd1 = cfg.clone();
     let fd2 = fd1.clone();
     let mut reader = unsafe { File::from_raw_fd(fd1) };
-    //let mut writer = unsafe { File::from_raw_fd(fd2) };
+    let mut writer = unsafe { File::from_raw_fd(fd2) };
     
-    (DeviceReader {reader}, DeviceWriter {writer: None})
+    (DeviceReader {reader}, DeviceWriter {writer})
 }
 
 pub struct DeviceWriter {
-    writer: Option<File>
+    writer: File
 }
 
 pub struct DeviceReader {
@@ -23,10 +23,7 @@ pub struct DeviceReader {
 
 impl DeviceWriter {
     pub async fn write(&mut self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        /*if self.writer.is_some() {
-            return Ok(self.writer.unwrap().write(buf).await?);
-        }*/
-        Ok(0)
+        Ok(self.writer.unwrap().write(buf).await?)
     }
 }
 
