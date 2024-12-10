@@ -24,7 +24,7 @@ pub mod general {
     }
 
     impl CoreVpnClient {
-         pub async fn start(&mut self, sock: UdpSocket, dev_reader: DeviceReader, dev_writer: DeviceWriter, mtu: u16) {
+         pub async fn start(&mut self, sock: UdpSocket, mut dev_reader: DeviceReader, mut dev_writer: DeviceWriter, mtu: u16) {
             info!("Starting client...");
     
             let dr_cancel: CancellationToken = CancellationToken::new();

@@ -77,7 +77,7 @@ pub struct DeviceReader {
 }
 
 impl DeviceWriter {
-    pub async fn write(&self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
+    pub async fn write(&mut self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
         let mut write_pack = self.session.allocate_send_packet(buf.len() as u16)?;
         write_pack.bytes_mut().copy_from_slice(buf);
         self.session.send_packet(write_pack);
@@ -86,7 +86,7 @@ impl DeviceWriter {
 }
 
 impl DeviceReader {
-    pub async fn read(&self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
+    pub async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
         let packet = self.session.receive_blocking()?;
         *buf = packet.bytes().to_vec();
         Ok(buf.len())

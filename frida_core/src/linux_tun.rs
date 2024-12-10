@@ -34,14 +34,14 @@ pub struct DeviceReader {
 }
 
 impl DeviceWriter {
-    pub async fn write(&self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
+    pub async fn write(&mut self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
         self.writer.send_all(buf).await?;
         Ok(0)
     }
 }
 
 impl DeviceReader {
-    pub async fn read(&self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
+    pub async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
         let n = self.reader.recv(buf).await?;
         Ok(n)
     }
