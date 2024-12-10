@@ -4,6 +4,7 @@ use tokio_tun::Tun;
 use std::net::Ipv4Addr;
 use std::os::unix::io::AsRawFd;
 use crate::device::AbstractDevice;
+use log::info;
 
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let tun = Arc::new(
