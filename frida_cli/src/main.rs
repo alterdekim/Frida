@@ -157,7 +157,7 @@ async fn main() {
 
         match mode {
             "server" => init_server(cfg_raw, matches.value_of("interface")).await,
-            "client" => init_client(cfg_raw),
+            "client" => init_client(cfg_raw).await,
             "new_peer" => generate_peer_config(&matches, config_path, cfg_raw),
             _ => error!("There is config file already")
         }
