@@ -44,10 +44,10 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
         .enumerate()
         .for_each(|(i, &c)| info.ctl_name[i] = c as i8);
 
-    if unsafe { nix::libc::ioctl(fd.as_raw_fd(), CTLIOCGINFO, &mut info) } < 0 {
-        let err = Errno::last();
-        panic!("ioctl CTLIOCGINFO failed: {}", err);
-    }
+    /*if */unsafe { nix::libc::ioctl(fd.as_raw_fd(), CTLIOCGINFO, &mut info) }; /*  < 0 {*/
+    //    let err = Errno::last();
+     //   panic!("ioctl CTLIOCGINFO failed: {}", err);
+    //}
 
     let mut sc = sockaddr_ctl {
         sc_len: std::mem::size_of::<sockaddr_ctl>() as u8,
