@@ -21,7 +21,7 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let address = cfg.address.unwrap().to_string();
     address.push_str("/24");
 
-    cmd("ip", &["addr", "add", "dev", iface.name(), address]);
+    cmd("ip", &["addr", "add", "dev", iface.name(), &address]);
     cmd("ip", &["link", "set", "up", "dev", iface.name()]);
 
     let iface = Arc::new(iface);
@@ -41,12 +41,12 @@ pub struct DeviceReader {
 
 impl DeviceWriter {
     pub async fn write(&self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        self.send(buf)
+        self.writer.send(buf)
     }
 }
 
 impl DeviceReader {
     pub async fn read(&self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        self.recv(buf)
+        self.reader.recv(buf)
     }
 }
