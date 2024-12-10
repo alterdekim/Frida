@@ -1,6 +1,7 @@
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::error::Error;
+use std::os::fd::FromRawFd;
 
 pub fn create(cfg: i32) -> (DeviceReader, DeviceWriter) {
     // check this if android build won't work
