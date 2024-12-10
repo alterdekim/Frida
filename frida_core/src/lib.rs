@@ -15,3 +15,9 @@ mod linux_tun;
 
 #[cfg(target_os = "linux")]
 pub use r#linux_tun::*;
+
+#[cfg(target_os = "macos")]
+mod mac_tun;
+
+#[cfg(target_os = "macos")]
+pub use r#mac_tun::*;
