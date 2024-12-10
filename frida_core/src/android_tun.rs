@@ -5,8 +5,10 @@ use std::os::fd::FromRawFd;
 
 pub fn create(cfg: i32) -> (DeviceReader, DeviceWriter) {
     // check this if android build won't work
-    let mut reader = unsafe { File::from_raw_fd(cfg) };
-    let mut writer = unsafe { File::from_raw_fd(cfg) };
+    let fd1 = cfg.clone();
+    let fd2 = fd1.clone();
+    let mut reader = unsafe { File::from_raw_fd(fd1) };
+    let mut writer = unsafe { File::from_raw_fd(fd2) };
     
     (DeviceReader {reader}, DeviceWriter {writer})
 }
