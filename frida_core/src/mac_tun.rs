@@ -16,7 +16,7 @@ fn cmd(cmd: &str, args: &[&str]) {
 }
 
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
-    let iface = Iface::new("tun%d", Mode::Tun).unwrap();
+    let iface = Iface::new("utun10", Mode::Tun).unwrap();
 
     let mut address = cfg.address.unwrap().to_string();
     address.push_str("/24");
