@@ -3,6 +3,7 @@ use tokio::{net::UdpSocket, sync::Mutex, time};
 use x25519_dalek::{PublicKey, StaticSecret};
 use base64::prelude::*;
 use log::{error, info};
+use core::str;
 use std::sync::Arc;
 use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
@@ -82,6 +83,7 @@ fn configure_routes(s_interface: Option<&str>) {
     }
 }
 
+
 pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
 
@@ -102,8 +104,19 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
 
     let (send2hnd, mut recv2hnd) = mpsc::unbounded_channel::<(Vec<u8>, SocketAddr)>(); // unbounded::<(Vec<u8>, SocketAddr)>();
 
+    let (send2loop, mut recv_from_tun) = mpsc::unbounded_channel::<Vec<u8>>();
+
     #[cfg(target_os = "linux")]
     configure_routes(s_interface);
+
+    let tun_rdr_task = tokio::spawn(async move {
+        let mut buf = vec![0; 4096];
+        loop {
+            if let Ok(n) = dev_reader.read(&mut buf).await {
+                let _ = send2loop.send(buf[..n].to_vec());
+            }
+        }
+    });
 
     let tun_writer_task = tokio::spawn(async move {
         loop {
@@ -143,33 +156,29 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     let addrs_cl = addresses.clone();
     let send2hnd_sr = send2hnd.clone();
     let tun_reader_task = tokio::spawn(async move {
-        let mut buf = vec![0u8; 4096];
         loop {
-            match dev_reader.read(&mut buf).await {
-                Ok(n) => {
-                    if n <= 19 { continue; }
-                
-                    let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
-                    let mp = addrs_cl.lock().await;
-                    if let Some(peer) = mp.get(&ip) {
-                        let aes = Aes256Gcm::new(&peer.shared_secret.into());
-                        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-        
-                        let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
-        
-                        if let Ok(ciphered_d) = ciphered_data {
-                            let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                            let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
-                        } else {
-                            error!("Traffic encryption failed.");
-                        }
+            if let Some(buf) = recv_from_tun.recv().await {
+                if buf.len() <= 19 { continue; }
+            
+                let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                let mp = addrs_cl.lock().await;
+                if let Some(peer) = mp.get(&ip) {
+                    let aes = Aes256Gcm::new(&peer.shared_secret.into());
+                    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    
+                    let ciphered_data = aes.encrypt(&nonce, &buf[..]);
+    
+                    if let Ok(ciphered_d) = ciphered_data {
+                        let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
+                        let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
                     } else {
-                        // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
-                        //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
+                        error!("Traffic encryption failed.");
                     }
-                    drop(mp);
-                },
-                Err(e) => error!("Error: {:?}", e)
+                } else {
+                    // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
+                    //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
+                }
+                drop(mp);
             }
         }
     });
@@ -245,7 +254,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     });
     
     // should be refactored
-    let _ = tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task, alive_task);
+    let _ = tokio::join!(tun_reader_task, sock_reader_task, sock_writer_task, tun_writer_task, alive_task, tun_rdr_task);
 }
 
 struct UDPeer {
