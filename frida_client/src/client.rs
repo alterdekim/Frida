@@ -100,7 +100,7 @@ pub mod general {
                                 if let Ok(ciphered_d) = ciphered_data {
                                     let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
                                     let serialized_data = vpn_packet.serialize();
-                                    info!("Write to socket");
+                                    //info!("Write to socket");
                                     sock_snd.send(&serialized_data).await.unwrap();
                                 } else {
                                     error!("Socket encryption failed.");
