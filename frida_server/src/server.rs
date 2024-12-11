@@ -145,28 +145,31 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     let tun_reader_task = tokio::spawn(async move {
         let mut buf = vec![0u8; 4096];
         loop {
-            if let Ok(n) = dev_reader.read(&mut buf).await {
-                if n <= 19 { continue; }
+            match dev_reader.read(&mut buf).await {
+                Ok(n) => {
+                    if n <= 19 { continue; }
                 
-                let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
-                let mp = addrs_cl.lock().await;
-                if let Some(peer) = mp.get(&ip) {
-                    let aes = Aes256Gcm::new(&peer.shared_secret.into());
-                    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    
-                    let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
-    
-                    if let Ok(ciphered_d) = ciphered_data {
-                        let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                        let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
+                    let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                    let mp = addrs_cl.lock().await;
+                    if let Some(peer) = mp.get(&ip) {
+                        let aes = Aes256Gcm::new(&peer.shared_secret.into());
+                        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+        
+                        let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
+        
+                        if let Ok(ciphered_d) = ciphered_data {
+                            let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
+                            let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
+                        } else {
+                            error!("Traffic encryption failed.");
+                        }
                     } else {
-                        error!("Traffic encryption failed.");
+                        // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
+                        //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
                     }
-                } else {
-                    // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
-                    //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
-                }
-                drop(mp);
+                    drop(mp);
+                },
+                Err(e) => error!("Error: {:?}", e)
             }
         }
     });
