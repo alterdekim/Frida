@@ -61,14 +61,10 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let asc = &sc as *const sockaddr_ctl as *const sockaddr;
     let f = unsafe { connect(fd.as_raw_fd(), asc, size_of::<sockaddr_ctl>() as u32 ) };
 
-    info!("utun interface created successfully {:?}", f);
+    info!("utun interface created successfully, fd: {:?}", f);
 
     let mut reader = unsafe { File::from_raw_fd(f) };
     let mut writer = unsafe { File::from_raw_fd(f) };
-    
-    (DeviceReader {reader}, DeviceWriter {writer})
-
-    /*let iface = Iface::new("utun10", Mode::Tun).unwrap();
 
     let mut address = cfg.address.unwrap().to_string();
     address.push_str("/24");
@@ -80,9 +76,7 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let writer = Arc::clone(&iface);
     let reader = Arc::clone(&iface);
 
-    (DeviceReader {reader}, DeviceWriter {writer})*/
-
-
+    (DeviceReader {reader}, DeviceWriter {writer})
 }
 
 pub struct DeviceWriter {
