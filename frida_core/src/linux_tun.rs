@@ -8,26 +8,26 @@ use log::info;
 
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
 
-    let builder = Tun::builder();
+    let mut builder = Tun::builder();
 
     if cfg.tun_name.is_some() {
-        builder.name(&cfg.tun_name.unwrap());
+        builder = builder.name(&cfg.tun_name.unwrap());
     }
 
     if cfg.mtu.is_some() {
-        builder.mtu(cfg.mtu.unwrap().into());
+        builder = builder.mtu(cfg.mtu.unwrap().into());
     }
 
     if cfg.address.is_some() {
-        builder.address(cfg.address.unwrap());
+        builder = builder.address(cfg.address.unwrap());
     }
 
     if cfg.netmask.is_some() {
-        builder.netmask(cfg.netmask.unwrap());
+        builder = builder.netmask(cfg.netmask.unwrap());
     }
 
     if cfg.destination.is_some() {
-        builder.destination(cfg.destination.unwrap());
+        builder = builder.destination(cfg.destination.unwrap());
     }
 
     let tun = Arc::new(
