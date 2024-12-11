@@ -7,13 +7,31 @@ use crate::device::AbstractDevice;
 use log::info;
 
 pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
+
+    let builder = Tun::builder();
+
+    if cfg.tun_name.is_some() {
+        builder.name(&cfg.tun_name.unwrap());
+    }
+
+    if cfg.mtu.is_some() {
+        builder.mtu(cfg.mtu.unwrap().into());
+    }
+
+    if cfg.address.is_some() {
+        builder.address(cfg.address.unwrap());
+    }
+
+    if cfg.netmask.is_some() {
+        builder.netmask(cfg.netmask.unwrap());
+    }
+
+    if cfg.destination.is_some() {
+        builder.destination(cfg.destination.unwrap());
+    }
+
     let tun = Arc::new(
-        Tun::builder()
-            .name(&cfg.tun_name.unwrap())            // if name is empty, then it is set by kernel.
-            .mtu(cfg.mtu.unwrap().into())
-            .address(cfg.address.unwrap())
-            .netmask(cfg.netmask.unwrap())
-            .destination(cfg.destination.unwrap())
+        builder
             .up()                // or set it up manually using `sudo ip link set <tun-name> up`.
             .try_build()         // or `.try_build_mq(queues)` for multi-queue support.
             .unwrap(),
