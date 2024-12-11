@@ -56,7 +56,7 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
 
 async fn init_server(cfg_raw: &str, s_interface: Option<&str>) {
     let config: ServerConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad server config file structure");
-    //server::server_mode(config, s_interface).await;
+    frida_server::server::server_mode(config, s_interface).await;
 }
 
 async fn init_client(cfg_raw: &str) {

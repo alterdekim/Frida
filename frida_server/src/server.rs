@@ -1,4 +1,3 @@
-use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio::{net::UdpSocket, sync::Mutex, time};
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -9,13 +8,13 @@ use std::net::{ SocketAddr, Ipv4Addr, IpAddr };
 use std::collections::HashMap;
 use aes_gcm::{ aead::{Aead, AeadCore, KeyInit, OsRng},
 Aes256Gcm, Nonce };
-use tun::{Configuration, create_as_async};
 
 #[cfg(target_os = "linux")]
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
-use crate::config::{ ServerConfiguration, ServerPeer};
-use crate::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
+use frida_core::config::{ ServerConfiguration, ServerPeer};
+use frida_core::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
+use frida_core::{DeviceReader, DeviceWriter, create, device::AbstractDevice};
 
 #[cfg(target_os = "linux")]
 fn configure_routes(s_interface: Option<&str>) {
@@ -85,15 +84,13 @@ fn configure_routes(s_interface: Option<&str>) {
 
 pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
-    
-    let mut config = Configuration::default();
-    config.address(&server_config.interface.internal_address)
-        .netmask("255.255.255.0")
-        .tun_name("tun0")
-        .up();
 
-    let dev = create_as_async(&config).unwrap();
-    let (mut dev_writer, mut dev_reader) = dev.into_framed().split();
+    let mut config = AbstractDevice::default();
+    config.address(server_config.interface.internal_address.parse().unwrap())
+        .netmask(Ipv4Addr::new(255, 255, 255, 0)) // 255.255.255.0
+        .tun_name("tun0");
+    
+    let (mut dev_reader, mut dev_writer) = create(config);
 
     let sock = UdpSocket::bind(&server_config.interface.bind_address).await.unwrap();
     let sock_rec = Arc::new(sock);
@@ -112,7 +109,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
         loop {
             if let Some(bytes) = recv2tun.recv().await {
                 info!("Sent to tun!");
-                let _ = dev_writer.send(bytes).await;
+                let _ = dev_writer.write(&bytes).await;
             }
         }
     });
@@ -146,28 +143,31 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     let addrs_cl = addresses.clone();
     let send2hnd_sr = send2hnd.clone();
     let tun_reader_task = tokio::spawn(async move {
-        while let Some(Ok(buf)) = dev_reader.next().await {
-            if buf.len() <= 19 { continue; }
-            
-            let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
-            let mp = addrs_cl.lock().await;
-            if let Some(peer) = mp.get(&ip) {
-                let aes = Aes256Gcm::new(&peer.shared_secret.into());
-                let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-
-                let ciphered_data = aes.encrypt(&nonce, &buf[..]);
-
-                if let Ok(ciphered_d) = ciphered_data {
-                    let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
-                    let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
+        let mut buf = vec![0u8; 4096];
+        loop {
+            if let Ok(n) = dev_reader.read(&mut buf).await {
+                if n <= 19 { continue; }
+                
+                let ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                let mp = addrs_cl.lock().await;
+                if let Some(peer) = mp.get(&ip) {
+                    let aes = Aes256Gcm::new(&peer.shared_secret.into());
+                    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    
+                    let ciphered_data = aes.encrypt(&nonce, &buf[..n]);
+    
+                    if let Ok(ciphered_d) = ciphered_data {
+                        let vpn_packet = UDPVpnPacket{ data: ciphered_d, nonce: nonce.to_vec()};
+                        let _ = send2hnd_sr.send((vpn_packet.serialize(), peer.addr));
+                    } else {
+                        error!("Traffic encryption failed.");
+                    }
                 } else {
-                    error!("Traffic encryption failed.");
+                    // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
+                    //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
                 }
-            } else {
-                // TODO: check in config is broadcast mode enabled (if not, do not send this to everyone)
-                //mp.values().for_each(| peer | { sock_snd.send_to(&buf[..n], peer.addr); });
+                drop(mp);
             }
-            drop(mp);
         }
     });
     

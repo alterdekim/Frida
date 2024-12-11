@@ -1589,6 +1589,7 @@ dependencies = [
  "env_logger",
  "frida_client",
  "frida_core",
+ "frida_server",
  "log",
  "serde",
  "serde_derive",
@@ -1676,6 +1677,16 @@ dependencies = [
 [[package]]
 name = "frida_server"
 version = "0.2.0"
+dependencies = [
+ "aes-gcm",
+ "base64 0.22.1",
+ "env_logger",
+ "frida_core",
+ "log",
+ "tokio",
+ "tokio-util",
+ "x25519-dalek",
+]
 
 [[package]]
 name = "futures"
