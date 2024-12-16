@@ -2,6 +2,7 @@
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/alterdekim/Frida)
 [![Jenkins Build](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.awain.net%2Fjob%2FFrida%2F)](https://jenkins.awain.net/job/Frida/)
+![GitHub License](https://img.shields.io/github/license/alterdekim/Frida)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/alterdekim/Frida)
 
 A lightweight VPN software, focused on scalability, traffic obfuscation and simplicity.
