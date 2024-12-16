@@ -3,20 +3,18 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/alterdekim/Frida)
 [![Jenkins Build](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fjenkins.awain.net%2Fjob%2FFrida%2F)](https://jenkins.awain.net/job/Frida/)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/alterdekim/Frida)
-![GitHub Repo stars](https://img.shields.io/github/stars/alterdekim/Frida)
-
 
 A lightweight VPN software, focused on scalability, traffic obfuscation and simplicity.
 
-## CLI Arguments
+## Usage
 
-### Usage
+### CLI
 
-```bash
+```shell
 ./frida_vpn [FLAGS] [OPTIONS] <mode> --config <FILE>
 ```
 
-### Options
+#### Options
 | Name        | Value type           | Description  |
 | ------------- |:-------------:| -----:|
 | bind-address      | IP:PORT | The ip:port that would be used to bind server (config) |
@@ -28,7 +26,7 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 | obfs-type | OBFS      |    Obfuscation protocol (config) [possible values: dns, veil, xor] |
 | peer-cfg | FILE_PATH      |    The path to VPN peer configuration file |
 
-### Flags
+#### Flags
 | Name (short)        | Name (long)           | Description  |
 | ------------- |:-------------:| -----:|
 |       | broadcast-mode | If set to true, then all incoming traffic with an unknown destination address will be forwarded to all peers (config) |
@@ -36,7 +34,7 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 | h | help      |    Prints help information |
 | V | version      |    Prints version information |
 
-### Args
+#### Args
 | Name        | Required       | Description |
 | ------------- |:-------------:| -----:|
 | mode        | true           | Runs the program in certain mode [possible values: server, client, gen_cfg, new_peer] |
@@ -45,7 +43,7 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 
 On Linux, you can run this in a terminal (sudo required):
 
-```
+```shell
 curl --proto '=https' --tlsv1.2 -sSf https://get-frida.awain.net | sh
 ```
 
@@ -57,11 +55,11 @@ There is an app for both Android and IOS devices.
 
 ### Android links
  - Google play: ...
- - Github: ...
+ - [Github](https://github.com/alterdekim/JAAV)
 
 ### IOS links
+ - AppStore: ...
  - Github: ...
 
 ## Todo
  - implement obfuscation protocols
- - make an Android build
