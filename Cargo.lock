@@ -1607,6 +1607,7 @@ dependencies = [
  "env_logger",
  "frida_core",
  "log",
+ "rand",
  "regex",
  "tokio",
  "tokio-util",

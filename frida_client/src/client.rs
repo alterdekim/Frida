@@ -1,14 +1,16 @@
 pub mod general {
     use frida_core::config::ClientConfiguration;
+    use rand::Rng;
     use tokio_util::{codec::Framed, sync::CancellationToken};
-    use tokio::{net::UdpSocket, sync::{Mutex, mpsc}, io::{AsyncWriteExt, AsyncReadExt}, fs::File};
+    use tokio::{fs::File, io::{AsyncReadExt, AsyncWriteExt}, net::UdpSocket, sync::{mpsc, Mutex}, time};
     use log::{error, info, warn};
     use aes_gcm::{
         aead::{Aead, AeadCore, KeyInit, OsRng},
         Aes256Gcm, Nonce};
     use base64::prelude::*;
-    use std::{io::{Read, Write}, sync::Arc};
+    use std::{io::{Read, Write}, sync::Arc, time::Duration};
     use std::net::Ipv4Addr;
+    use rand::rngs::{OsRng as OsPRNG};
     
     use x25519_dalek::{PublicKey, StaticSecret};
     use frida_core::udp::{UDPVpnPacket, UDPVpnHandshake, UDPSerializable};
@@ -32,6 +34,7 @@ pub mod general {
         
             let sock_rec = Arc::new(sock);
             let sock_snd = sock_rec.clone();
+            let sock_hnd = sock_snd.clone();
         
             let (tx, mut rx) = mpsc::unbounded_channel::<Vec<u8>>();
             let (dx, mut mx) = mpsc::unbounded_channel::<Vec<u8>>();
@@ -44,16 +47,19 @@ pub mod general {
         
             let pkey = BASE64_STANDARD.decode(&self.client_config.client.public_key).unwrap();
             let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
-            let mut nz = 0;
-            while nz < 25 {
-                sock_snd.send(&handshake.serialize()).await.unwrap();
-                nz += 1
-            }
-            //sock_snd.send(&handshake.serialize()).await.unwrap();
+            tokio::spawn(async move {
+                    let mut interval = time::interval(Duration::from_millis(1));
+                    let mut rng = OsPRNG::default();
+                    loop {
+                        interval.tick().await;
+                        interval = time::interval(Duration::from_millis(1000 * rng.gen_range(10..=15))); // 960
+                        sock_hnd.send(&handshake.serialize()).await.unwrap();
+                    }
+            });
         
             let s_cipher = cipher_shared.clone();
     
-            let _ = dev_writer.write(&handshake.serialize()).await;
+            //let _ = dev_writer.write(&handshake.serialize()).await;
     
             let mut buf1 = vec![0; 4096]; // should be changed to less bytes
 

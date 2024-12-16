@@ -21,3 +21,4 @@ tokio-util = "0.7.12"
 env_logger = "0.9"
 log = "0.4.20"
 regex = "1.11.1"
+rand = { version = "0.8.5", features = ["small_rng", "getrandom", "std_rng"] }
