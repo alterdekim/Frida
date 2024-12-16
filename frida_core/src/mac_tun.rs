@@ -69,12 +69,13 @@ pub fn create(cfg: AbstractDevice) -> (DeviceReader, DeviceWriter) {
     let mut address = cfg.address.unwrap().to_string();
     address.push_str("/24");
 
+    /* 
     cmd("ip", &["addr", "add", "dev", iface.name(), &address]);
     cmd("ip", &["link", "set", "up", "dev", iface.name()]);
 
     let iface = Arc::new(iface);
     let writer = Arc::clone(&iface);
-    let reader = Arc::clone(&iface);
+    let reader = Arc::clone(&iface);*/
 
     (DeviceReader {reader}, DeviceWriter {writer})
 }
