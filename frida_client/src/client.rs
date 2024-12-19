@@ -52,7 +52,7 @@ pub mod general {
                     let mut rng = OsPRNG::default();
                     loop {
                         interval.tick().await;
-                        interval = time::interval(Duration::from_millis(1000 * rng.gen_range(10..=15))); // 960
+                        interval = time::interval(Duration::from_millis(1000 * rng.gen_range(10..=480)));
                         sock_hnd.send(&handshake.serialize()).await.unwrap();
                     }
             });
