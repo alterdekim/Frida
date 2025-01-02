@@ -86,6 +86,7 @@ pub struct ClientInterface {
 pub struct EndpointInterface {
     pub public_key: String,
     pub endpoint: String,
+    pub internal_gateway: String,
     pub keepalive: u8
 }
 
@@ -96,7 +97,7 @@ pub struct ClientConfiguration {
 }
 
 impl ClientConfiguration {
-    pub fn default(endpoint: &str, keepalive: u8, public_key: &str, internal_address: &str) -> Self {
+    pub fn default(endpoint: &str, keepalive: u8, public_key: &str, internal_address: &str, internal_gateway: &str) -> Self {
         let mut csprng = StdRng::from_entropy();
         let secret = StaticSecret::random_from_rng(&mut csprng);
         ClientConfiguration { 
@@ -108,6 +109,7 @@ impl ClientConfiguration {
             server: EndpointInterface { 
                 public_key: String::from_str(public_key).unwrap(), 
                 endpoint: String::from_str(endpoint).unwrap(),
+                internal_gateway: String::from_str(internal_gateway).unwrap(),
                 keepalive
             } 
         }

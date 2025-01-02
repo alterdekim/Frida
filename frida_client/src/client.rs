@@ -316,7 +316,7 @@ pub mod desktop {
             let mtu: u16 = 1400;
             config.address(self.client_config.client.address.parse().unwrap())
                 .netmask(Ipv4Addr::new(255, 255, 255, 255))
-                .destination(Ipv4Addr::new(10, 66, 66, 1))
+                .destination(self.client_config.server.internal_gateway.parse().unwrap())
                 .mtu(mtu)
                 .tun_name("tun0");
         

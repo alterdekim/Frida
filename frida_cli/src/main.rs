@@ -42,10 +42,11 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
 
     internal_address = Ipv4Addr::new(internal_address.octets()[0], internal_address.octets()[1], internal_address.octets()[2], internal_address.octets()[3]+1);
 
-    let cl_cfg = &ClientConfiguration::default(if grab_endpoint { &config.interface.bind_address } else { endpoint }, 
+    let cl_cfg = &ClientConfiguration::default(&config.interface.bind_address.clone(), 
         keepalive, 
         &config.interface.public_key, 
-        &internal_address.to_string());
+        &internal_address.to_string(),
+        &config.interface.internal_address.clone());
 
     config.peers.push(ServerPeer { public_key: cl_cfg.client.public_key.clone(), ip: internal_address.clone() });
 
