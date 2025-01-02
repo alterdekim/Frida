@@ -53,6 +53,7 @@ pub mod general {
                     loop {
                         interval.tick().await;
                         interval = time::interval(Duration::from_millis(1000 * rng.gen_range(40..=480)));
+                        info!("The handshake has been sent!");
                         sock_hnd.send(&handshake.serialize()).await.unwrap();
                     }
             });
