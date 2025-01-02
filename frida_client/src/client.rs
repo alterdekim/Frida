@@ -52,8 +52,9 @@ pub mod general {
                     let mut rng = OsPRNG::default();
                     loop {
                         interval.tick().await;
-                        interval = time::interval(Duration::from_millis(1000 * rng.gen_range(40..=480)));
-                        info!("The handshake has been sent!");
+                        let inte: u64 = 1000 * rng.gen_range(40..=480);
+                        interval = time::interval(Duration::from_millis(inte.clone()));
+                        info!("The handshake has been sent! {}", inte);
                         sock_hnd.send(&handshake.serialize()).await.unwrap();
                     }
             });
