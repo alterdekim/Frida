@@ -48,13 +48,11 @@ pub mod general {
             let pkey = BASE64_STANDARD.decode(&self.client_config.client.public_key).unwrap();
             let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
             tokio::spawn(async move {
-                    let mut interval = time::interval(Duration::from_millis(1));
                     let mut rng = OsPRNG::default();
+                    sock_hnd.send(&handshake.serialize()).await.unwrap();
                     loop {
-                        let r = interval.tick().await;
-                        let inte: u64 = 1000 * rng.gen_range(40..=480);
-                        interval = time::interval(Duration::from_millis(inte.clone()));
-                        info!("The handshake has been sent! {}", inte);
+                        time::sleep(Duration::from_millis(1000 * rng.gen_range(40..=480))).await;
+                        info!("The handshake has been sent!");
                         sock_hnd.send(&handshake.serialize()).await.unwrap();
                     }
             });
