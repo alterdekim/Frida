@@ -121,7 +121,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     let tun_writer_task = tokio::spawn(async move {
         loop {
             if let Some(bytes) = recv2tun.recv().await {
-                info!("Sent to tun!");
+                //info!("Sent to tun!");
                 let _ = dev_writer.write(&bytes).await;
             }
         }
@@ -147,7 +147,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
     let sock_writer_task = tokio::spawn(async move {
         loop {
             if let Some((handshake, addr)) = recv2hnd.recv().await {
-                info!("I SENT THAT STUFF");
+                //info!("I SENT THAT STUFF");
                 let _ = sock_hnd.send_to(&handshake, addr).await;
             }
         }
@@ -196,7 +196,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
         let mut buf = vec![0; 2048];
         loop {
             if let Ok((len, addr)) = sock_rec.recv_from(&mut buf).await {
-                info!("There is packet!");
+                //info!("There is packet!");
                 let mut mp = addrs_lp.lock().await;
                 let plp = peers_lp.lock().await;
                 match buf.first() {
