@@ -6,7 +6,7 @@ members = ["frida_core","frida_client","frida_server","frida_cli","frida_gui","f
 env_logger = "0.11.6"
 log = "0.4.20"
 tokio = { version = "1", features = ["full", "signal", "tracing"] }
-tokio-util = "0.7.12"
+tokio-util = { version = "0.7.12", features = ["codec"] }
 serde_yaml = "0.9.34"
 serde = "1.0"
 serde_derive = "1.0.190"
