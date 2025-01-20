@@ -51,7 +51,7 @@ pub mod general {
                     let mut rng = OsPRNG::default();
                     sock_hnd.send(&handshake.serialize()).await.unwrap();
                     loop {
-                        time::sleep(Duration::from_millis(1000 * rng.gen_range(40..=480))).await;
+                        time::sleep(Duration::from_millis(1000 * rng.gen_range(80..=480))).await;
                         info!("The handshake has been sent!");
                         sock_hnd.send(&handshake.serialize()).await.unwrap();
                     }

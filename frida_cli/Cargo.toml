@@ -11,13 +11,10 @@ workspace = "../"
 
 [dependencies]
 clap = "2.33"
-env_logger = "0.9"
-log = "0.4.20"
-serde = "1.0"
-serde_derive = "1.0.190"
-serde_yaml = "0.9.34"
-tokio = { version = "1", features = ["full", "signal", "tracing"] }
-tokio-util = "0.7.12"
+serde_yaml = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+tokio = { workspace = true }
 frida_core = { path = "../frida_core" }
 frida_client = { path = "../frida_client" }
 frida_server = { path = "../frida_server" }

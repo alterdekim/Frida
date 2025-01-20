@@ -204,11 +204,11 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                         match h {
                             0 => {
                                 let handshake = UDPVpnHandshake::deserialize(&buf);
-                                info!("Got handshake from {:?}", handshake.request_ip);
+                                //info!("Got handshake from {:?}", handshake.request_ip);
                                 let skey = BASE64_STANDARD.encode(&handshake.public_key);
                                 if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
                                     let internal_ip = IpAddr::V4(handshake.request_ip);
-                                    info!("Accepted client");
+                                    info!("Accepted client from {:?}", handshake.request_ip);
                                     let mut k = [0u8; 32];
                                     for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {
                                         *p = x;
