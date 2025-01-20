@@ -1540,6 +1540,7 @@ dependencies = [
  "futures",
  "iced",
  "libc",
+ "log",
  "nix",
  "rand",
  "serde",

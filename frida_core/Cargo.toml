@@ -20,6 +20,7 @@ x25519-dalek = { workspace = true }
 rand = { workspace = true }
 serde_derive = { workspace = true }
 serde = { workspace = true }
+log = { workspace = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
 iced = { version = "0.13.1", features = ["tokio"] }
