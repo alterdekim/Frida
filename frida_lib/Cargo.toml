@@ -15,6 +15,7 @@ path = "src/lib.rs"
 
 [dependencies]
 hex = "0.4"
+serde_yaml = { workspace = true }
 frida_core = { path = "../frida_core" }
 frida_client = { path = "../frida_client" }
 
