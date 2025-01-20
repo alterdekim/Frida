@@ -1544,10 +1544,13 @@ dependencies = [
  "frida_core",
  "hex",
  "jni 0.20.0",
+ "log",
  "log4rs",
  "nonblock",
  "robusta_jni",
  "serde_yaml",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
