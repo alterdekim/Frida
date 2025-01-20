@@ -83,7 +83,7 @@ fn configure_routes(s_interface: Option<&str>) {
     }
 }
 
-
+#[cfg(not(target_os = "android"))]
 pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
 
