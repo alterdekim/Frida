@@ -1545,6 +1545,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_derive",
+ "tokio",
  "tokio-tun",
  "tray-item",
  "tun",
