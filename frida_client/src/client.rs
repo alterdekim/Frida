@@ -124,6 +124,7 @@ pub mod general {
                                 Some(h) => {
                                     match h {
                                         0 => {
+                                            // todo: reduce repeated code blocks count
                                             let handshake = UDPVpnHandshake::deserialize(&(buf1[..l].to_vec()));
                                             let mut k = [0u8; 32];
                                             for (&x, p) in handshake.public_key.iter().zip(k.iter_mut()) {

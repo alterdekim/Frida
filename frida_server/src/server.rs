@@ -207,6 +207,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                 //info!("Got handshake from {:?}", handshake.request_ip);
                                 let skey = BASE64_STANDARD.encode(&handshake.public_key);
                                 if plp.iter().any(|c| c.ip == handshake.request_ip && c.public_key == skey) {
+                                    // todo: reduce repeated code blocks count
                                     let internal_ip = IpAddr::V4(handshake.request_ip);
                                     info!("Accepted client from {:?}", handshake.request_ip);
                                     let mut k = [0u8; 32];
