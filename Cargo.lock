@@ -567,16 +567,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b43c3f07ab0ef604fa6f595aa46ec2f8a22172c975e186f6f5bf9829a3b72c41"
 dependencies = [
- "c2rust-bitfields-derive 0.18.0",
-]
-
-[[package]]
-name = "c2rust-bitfields"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "367e5d1b30f28be590b6b3868da1578361d29d9bfac516d22f497d28ed7c9055"
-dependencies = [
- "c2rust-bitfields-derive 0.19.0",
+ "c2rust-bitfields-derive",
 ]
 
 [[package]]
@@ -584,17 +575,6 @@ name = "c2rust-bitfields-derive"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3cbc102e2597c9744c8bd8c15915d554300601c91a079430d309816b0912545"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "c2rust-bitfields-derive"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a279db9c50c4024eeca1a763b6e0f033848ce74e83e47454bcf8a8a98f7b0b56"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1548,7 +1528,6 @@ dependencies = [
  "tokio",
  "tokio-tun",
  "tray-item",
- "tun",
  "wintun",
  "x25519-dalek",
 ]
@@ -2157,12 +2136,6 @@ checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "ipnet"
-version = "2.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddc24109865250148c2e0f3d25d4f0f479571723792d3802153c60922a4fb708"
 
 [[package]]
 name = "is_terminal_polyfill"
@@ -4142,27 +4115,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
-name = "tun"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3f82bccbec181c56278683da7d915cf875a6cf8a450b3bcf1367de222775e"
-dependencies = [
- "bytes",
- "cfg-if",
- "futures",
- "futures-core",
- "ipnet",
- "libc",
- "log",
- "nix",
- "thiserror 2.0.5",
- "tokio",
- "tokio-util",
- "windows-sys 0.59.0",
- "wintun-bindings",
-]
-
-[[package]]
 name = "typemap-ors"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5015,27 +4967,11 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b196f9328341b035820c54beebca487823e2e20a5977f284f2af2a0ee8f04400"
 dependencies = [
- "c2rust-bitfields 0.18.0",
+ "c2rust-bitfields",
  "libloading 0.8.6",
  "log",
  "thiserror 1.0.69",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "wintun-bindings"
-version = "0.7.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50da04a12b4acd77944c4e3501a61e754dc798dadcab063c9bf1d7c40081ec41"
-dependencies = [
- "blocking",
- "c2rust-bitfields 0.19.0",
- "futures",
- "libloading 0.8.6",
- "log",
- "thiserror 2.0.5",
- "windows-sys 0.59.0",
- "winreg 0.52.0",
 ]
 
 [[package]]
