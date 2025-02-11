@@ -205,9 +205,17 @@ pub mod desktop {
     use log::info;
     use tokio::net::UdpSocket;
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     use regex::Regex;
 
+
+    fn cmd(cmd: &str, args: &[&str]) -> String {
+        let ecode = std::process::Command::new(cmd)
+            .args(args)
+            .output();
+        assert!(ecode.is_ok(), "Failed to execte {}", cmd);
+        std::str::from_utf8(&ecode.as_ref().unwrap().stdout).unwrap().to_string()
+    }
 
     #[cfg(target_os = "linux")]
     fn configure_routes(endpoint_ip: &str) {
@@ -306,6 +314,37 @@ pub mod desktop {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    fn configure_routes(endpoint_ip: &str) {
+        let mut if_out = cmd("route", &["-n", "get", "default"]);
+        let r = std::str::from_utf8(&if_out.as_bytes()).unwrap();
+    
+        let mut gateway = None;
+        let mut if_name = None;
+    
+        let ui = r.find("gateway: ").unwrap() + 9;
+        let s = &r[ui..];
+        let ei = s.find("\n").unwrap();
+        gateway = Some(&s[..ei]);
+    
+        let ui = r.find("interface: ").unwrap() + 11;
+        let s = &r[ui..];
+        let ei = s.find("\n").unwrap();
+        if_name = Some(&s[..ei]);
+    
+        info!("Main interface: {:?}", &if_name.unwrap());
+    
+        let inter_name = if_name.unwrap();
+    
+        info!("Main network interface: {:?}", &gateway.unwrap());
+        
+        cmd("route", &["add", "-host", endpoint_ip, &gateway.unwrap()]);
+
+        cmd("route", &["change", "default", "-interface", "utun3"]); // todo: change that
+    
+        cmd("route", &["add", "-host", endpoint_ip, &gateway.unwrap()]);
+    }
+
     pub struct DesktopClient {
         pub client_config: ClientConfiguration
     }
@@ -330,12 +369,15 @@ pub mod desktop {
             let mut client = CoreVpnClient{ client_config: self.client_config.clone(), close_token: tokio_util::sync::CancellationToken::new()};
            
             info!("Platform specific code");
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             {
                 let s_a: std::net::SocketAddr = self.client_config.server.endpoint.parse().unwrap();
                 configure_routes(&s_a.ip().to_string());
             }
             
+            #[cfg(target_os = "macos")]
+            sock.connect(&self.client_config.server.endpoint).await.unwrap();
+
             client.start(sock, dev_reader, dev_writer, mtu).await;
         }
     }
