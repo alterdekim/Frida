@@ -68,8 +68,10 @@ pub mod general {
                 loop {
                     match dev_reader.read(&mut buf).await {
                         Ok(n) => {
-                            //info!("Read from tun.");
+                            #[cfg(not(target_os = "macos"))]
                             dx.send(buf[..n].to_vec()).unwrap();
+                            #[cfg(target_os = "macos")]
+                            dx.send(buf[4..n].to_vec()).unwrap();
                         },
                         Err(_e) => { /*error!("Read failed {}", e);*/ }
                     }
@@ -87,6 +89,8 @@ pub mod general {
                     rr = rx.recv() => {
                         if let Some(bytes) = rr {
                             //info!("Write to tun. len={:?}", bytes.len());
+                            #[cfg(target_os = "macos")]
+                            let bytes = [vec![0, 0, 0, 2], bytes].concat();
                             
                             if let Err(e) = dev_writer.write(&bytes).await {
                                 //error!("Writing error: {:?}", e);
@@ -340,7 +344,7 @@ pub mod desktop {
         
         cmd("route", &["add", "-host", endpoint_ip, &gateway.unwrap()]);
 
-        cmd("route", &["change", "default", "-interface", "utun3"]); // todo: change that
+        cmd("route", &["change", "default", "-interface", "utun3"]); // TODO: change that
     
         cmd("route", &["add", "-host", endpoint_ip, &gateway.unwrap()]);
     }

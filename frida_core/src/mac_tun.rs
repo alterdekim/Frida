@@ -1,9 +1,10 @@
+use std::fs::File;
+use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, FromRawFd};
 use std::{ffi::CString, process::Command};
 use std::sync::Arc;
 use std::error::Error;
 use log::info;
-use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::device::AbstractDevice;
@@ -49,12 +50,12 @@ pub struct DeviceReader {
 
 impl DeviceWriter {
     pub async fn write(&mut self, buf: &Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        Ok(self.writer.write(buf).await?)
+        Ok(self.writer.write(buf)?)
     }
 }
 
 impl DeviceReader {
     pub async fn read(&mut self, buf: &mut Vec<u8>) -> Result<usize, Box<dyn Error>> {
-        Ok(self.reader.read_buf(buf).await?)
+        Ok(self.reader.read(buf)?)
     }
 }
