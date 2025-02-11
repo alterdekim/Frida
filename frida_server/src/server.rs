@@ -238,7 +238,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                     let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                     match aes.decrypt(&nonce, &packet.data[..]) {
                                         Ok(decrypted) => { 
-                                            info!("Start of packet: {:#?} from {}", decrypted[..12].to_vec(), addr);
+                                            //info!("Start of packet: {:#?} from {}", decrypted[..12].to_vec(), addr);
                                             let _ = send2tun.send(decrypted); 
                                         },
                                         Err(error) => error!("Decryption error! {:?}", error)
