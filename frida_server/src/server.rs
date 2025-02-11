@@ -237,7 +237,10 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                     let aes = Aes256Gcm::new(&p.shared_secret.into());
                                     let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                     match aes.decrypt(&nonce, &packet.data[..]) {
-                                        Ok(decrypted) => { let _ = send2tun.send(decrypted); },
+                                        Ok(decrypted) => { 
+                                            info!("Start of packet: {:#?} from {}", decrypted[..3].to_vec(), addr);
+                                            let _ = send2tun.send(decrypted); 
+                                        },
                                         Err(error) => error!("Decryption error! {:?}", error)
                                     }
                                 });
