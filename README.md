@@ -9,6 +9,15 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 
 ## Usage
 
+### Supported platforms
+| OS | Status (client) | Status (server) |
+| ------------- |:-------------:| -----:|
+| Mac OS | ✅ | ❌ |
+| Windows | ✅ | ❌ |
+| Linux | ✅ | ✅ |
+| Android | ✅ | ❌ |
+| IOS | ❌ | ❌ |
+
 ### CLI
 
 ```shell
