@@ -4,10 +4,9 @@ use eframe::egui::{self, Context, ScrollArea, Vec2};
 use egui_file::FileDialog;
 use tokio::sync::mpsc::UnboundedSender;
 use std::{
-    cell::RefCell, ffi::OsStr, path::{Path, PathBuf}, rc::Rc, sync::Arc, thread
+    ffi::OsStr, path::{Path, PathBuf}
   };
-use egui_extras::{Column, TableBuilder};
-use log::{info, error, LevelFilter};
+use log::{info, LevelFilter};
 use frida_core::config::ClientConfiguration;
 use frida_client::client::{desktop::DesktopClient, general::VpnClient};
 
@@ -64,7 +63,7 @@ async fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         env!("CARGO_PKG_NAME"),
         options.clone(),
-        Box::new(move |cc| {
+        Box::new(move |_cc| {
             Ok(Box::new(App::new(cv, tx)))
         }),
     )
@@ -90,7 +89,7 @@ impl App {
             screen: AppScreens::Configs,
             configs: Configs::new(cfgs),
             logs: Logs::default(),
-            tx: tx
+            tx
         }
     }
 }
@@ -116,17 +115,13 @@ impl eframe::App for App {
     }
 }
 
+#[derive(Default)]
 struct Logs {
 }
 
-impl Default for Logs {
-    fn default() -> Self {
-        Self{}
-    }
-}
 
 impl Logs {
-    fn ui(&mut self, ui: &mut egui::Ui, ctx: &Context) {
+    fn ui(&mut self, ui: &mut egui::Ui, _ctx: &Context) {
         egui::CentralPanel::default()
             .show_inside(ui, |ui| {
                 egui_logger::logger_ui().show(ui);
@@ -161,12 +156,12 @@ impl Configs {
     fn ui(&mut self, ui: &mut egui::Ui, ctx: &Context) {
 
         let Self {
-            num,
-            prev_btn_status,
-            btn_status,
-            open_config_dialog,
-            cfgs, 
-            selected_cfg
+            num: _,
+            prev_btn_status: _,
+            btn_status: _,
+            open_config_dialog: _,
+            cfgs: _, 
+            selected_cfg: _
         } = self;
 
         egui::SidePanel::left("clist")
@@ -180,7 +175,7 @@ impl Configs {
                         self.cfgs.iter().for_each(|f| {
                             let filename = f.file_name().unwrap().to_str().unwrap();
                             let mut b = egui::Button::new(filename);
-                            if self.selected_cfg.is_some() && self.selected_cfg.as_ref().unwrap().1 == filename.to_string() {
+                            if self.selected_cfg.is_some() && self.selected_cfg.as_ref().unwrap().1 == filename {
                                 b = b.fill(egui::Color32::LIGHT_BLUE); 
                             }
                             let e = ui.add_sized(
@@ -262,9 +257,9 @@ impl Configs {
                         let mut fp = get_configs_dir();
                         fp.push(&self.selected_cfg.as_ref().unwrap().1);
                         let path = &fp.to_str().unwrap().to_string();
-                        if let Ok(r) = std::fs::remove_file(path) {
+                        if let Ok(_r) = std::fs::remove_file(path) {
                             for i in 0..self.cfgs.len() {
-                                if &self.selected_cfg.as_ref().unwrap().1 == self.cfgs[i].file_name().unwrap().to_str().unwrap() {
+                                if self.selected_cfg.as_ref().unwrap().1 == self.cfgs[i].file_name().unwrap().to_str().unwrap() {
                                     self.cfgs.remove(i);
                                     break;
                                 }

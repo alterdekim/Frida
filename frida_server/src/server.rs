@@ -15,7 +15,7 @@ use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
 use frida_core::config::{ ServerConfiguration, ServerPeer};
 use frida_core::udp::{UDPKeepAlive, UDPSerializable, UDPVpnHandshake, UDPVpnPacket};
-use frida_core::{DeviceReader, DeviceWriter, create, device::AbstractDevice};
+use frida_core::{create, device::AbstractDevice};
 
 #[cfg(target_os = "linux")]
 fn configure_routes(s_interface: Option<&str>) {
@@ -84,7 +84,7 @@ fn configure_routes(s_interface: Option<&str>) {
 }
 
 #[cfg(not(target_os = "android"))]
-pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
+pub async fn server_mode(server_config: ServerConfiguration, _s_interface: Option<&str>) {
     info!("Starting server...");
 
     let mut config = AbstractDevice::default();
@@ -127,13 +127,13 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
         }
     });
 
-    let keepalive_sec = server_config.interface.keepalive.clone();
+    let keepalive_sec = server_config.interface.keepalive;
     let send2hnd_cl = send2hnd.clone();
     let addrs_lcl = addresses.clone();
 
     let alive_task = tokio::spawn(async move {
-        let kp_sc = keepalive_sec.clone();
-        if kp_sc <= 0 { return; }
+        let kp_sc = keepalive_sec;
+        if kp_sc == 0 { return; }
         loop {
             time::sleep(time::Duration::from_secs(kp_sc.into())).await;
             let mmp = addrs_lcl.lock().await;
@@ -237,9 +237,23 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                     let aes = Aes256Gcm::new(&p.shared_secret.into());
                                     let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
                                     match aes.decrypt(&nonce, &packet.data[..]) {
-                                        Ok(decrypted) => { 
+                                        Ok(decrypted) => {
+                                            let destination_ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                                            if let Some(peer) = mp.get(&destination_ip) {
+                                                let aes = Aes256Gcm::new(&peer.shared_secret.into());
+                                                let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+                                
+                                                if let Ok(ciphered_data) = aes.encrypt(&nonce, &buf[..]) {
+                                                    let packet  = UDPVpnPacket {
+                                                        nonce: nonce.to_vec(),
+                                                        data: ciphered_data
+                                                    };
+                                                    let _ = send2hnd_ssr.send((packet.serialize(), peer.addr));
+                                                }
+                                            } else {
+                                                let _ = send2tun.send(decrypted);
+                                            }
                                             //info!("Start of packet: {:#?} from {}", decrypted[..12].to_vec(), addr);
-                                            let _ = send2tun.send(decrypted); 
                                         },
                                         Err(error) => error!("Decryption error! {:?}", error)
                                     }

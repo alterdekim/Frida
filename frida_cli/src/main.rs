@@ -23,8 +23,8 @@ fn generate_server_config(matches: &ArgMatches, config_path: &str) {
 
 fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &String) {
     let keepalive: u8 = matches.value_of("keepalive").unwrap().parse().expect("Keepalive argument should be a number");
-    let grab_endpoint = matches.value_of("grab-endpoint").is_some();
-    let endpoint = matches.value_of("endpoint").or(Some("0.0.0.0:0")).unwrap();
+    let _grab_endpoint = matches.value_of("grab-endpoint").is_some();
+    let _endpoint = matches.value_of("endpoint").unwrap_or("0.0.0.0:0");
     let peer_cfg = matches.value_of("peer-cfg").expect("No peer cfg path specified");
 
     let mut config: ServerConfiguration = serde_yaml::from_str(cfg_raw).expect("Bad server config file structure");
@@ -32,13 +32,11 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
     let prs = &mut config.peers[..];
     prs.sort_by(|a, b| a.ip.octets()[3].cmp(&b.ip.octets()[3]));
     
-    let mut internal_address = prs.iter()
+    let mut internal_address = *prs.iter()
                                     .map(|p| p.ip)
                                     .collect::<Vec<Ipv4Addr>>()
                                     .first()
-                                    .or(Some(&config.interface.internal_address.parse::<Ipv4Addr>().unwrap()))
-                                    .unwrap()
-                                    .clone();
+                                    .unwrap_or(&config.interface.internal_address.parse::<Ipv4Addr>().unwrap());
 
     internal_address = Ipv4Addr::new(internal_address.octets()[0], internal_address.octets()[1], internal_address.octets()[2], internal_address.octets()[3]+1);
 
@@ -48,7 +46,7 @@ fn generate_peer_config(matches: &ArgMatches, config_path: &str, cfg_raw: &Strin
         &internal_address.to_string(),
         &config.interface.internal_address.clone());
 
-    config.peers.push(ServerPeer { public_key: cl_cfg.client.public_key.clone(), ip: internal_address.clone() });
+    config.peers.push(ServerPeer { public_key: cl_cfg.client.public_key.clone(), ip: internal_address });
 
     let _ = fs::write(peer_cfg, serde_yaml::to_string(cl_cfg).unwrap());
 

@@ -1,8 +1,8 @@
 pub mod general {
     use frida_core::config::ClientConfiguration;
     use rand::Rng;
-    use tokio_util::{codec::Framed, sync::CancellationToken};
-    use tokio::{fs::File, io::{AsyncReadExt, AsyncWriteExt}, net::UdpSocket, sync::{mpsc, Mutex}, time};
+    use tokio_util::sync::CancellationToken;
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::UdpSocket, sync::{mpsc, Mutex}, time};
     use log::{error, info, warn};
     use aes_gcm::{
         aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -48,7 +48,7 @@ pub mod general {
             let pkey = BASE64_STANDARD.decode(&self.client_config.client.public_key).unwrap();
             let handshake = UDPVpnHandshake{ public_key: pkey, request_ip: self.client_config.client.address.parse::<Ipv4Addr>().unwrap() };
             tokio::spawn(async move {
-                    let mut rng = OsPRNG::default();
+                    let mut rng = OsPRNG;
                     sock_hnd.send(&handshake.serialize()).await.unwrap();
                     loop {
                         time::sleep(Duration::from_millis(1000 * rng.gen_range(80..=480))).await;
@@ -88,7 +88,7 @@ pub mod general {
                         if let Some(bytes) = rr {
                             //info!("Write to tun. len={:?}", bytes.len());
                             
-                            if let Err(e) = dev_writer.write(&bytes).await {
+                            if let Err(_e) = dev_writer.write(&bytes).await {
                                 //error!("Writing error: {:?}", e);
                             }
                         }
@@ -355,7 +355,7 @@ pub mod desktop {
             let mut config = AbstractDevice::default();
             let mtu: u16 = 1400;
             config.address(self.client_config.client.address.parse().unwrap())
-                .netmask(Ipv4Addr::new(255, 255, 255, 255))
+                .netmask(Ipv4Addr::new(255, 255, 255, 0))
                 .destination(self.client_config.server.internal_gateway.parse().unwrap())
                 .mtu(mtu)
                 .tun_name("tun0");
