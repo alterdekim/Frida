@@ -84,7 +84,7 @@ fn configure_routes(s_interface: Option<&str>) {
 }
 
 #[cfg(not(target_os = "android"))]
-pub async fn server_mode(server_config: ServerConfiguration, _s_interface: Option<&str>) {
+pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option<&str>) {
     info!("Starting server...");
 
     let mut config = AbstractDevice::default();
