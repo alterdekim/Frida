@@ -106,6 +106,8 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
 
     let (send2loop, mut recv_from_tun) = mpsc::unbounded_channel::<Vec<u8>>();
 
+    info!("{:?}", s_interface);
+
     #[cfg(target_os = "linux")]
     configure_routes(s_interface);
 
