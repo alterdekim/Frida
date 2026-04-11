@@ -11,7 +11,7 @@ workspace = "../"
 
 [[bin]]
 name = "frida-gui"
-path = "src/gui/mod.rs"
+path = "src/main.rs"
 
 [dependencies]
 frida_core = { path = "../frida_core", package = "frida_core" }
