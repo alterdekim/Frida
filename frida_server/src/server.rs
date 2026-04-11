@@ -239,6 +239,7 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                                     match aes.decrypt(&nonce, &packet.data[..]) {
                                         Ok(decrypted) => {
                                             let destination_ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                                            info!("Destination ip: {}", destination_ip);
                                             if let Some(peer) = mp.get(&destination_ip) {
                                                 let aes = Aes256Gcm::new(&peer.shared_secret.into());
                                                 let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
