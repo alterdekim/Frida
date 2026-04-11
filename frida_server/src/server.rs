@@ -235,32 +235,37 @@ pub async fn server_mode(server_config: ServerConfiguration, s_interface: Option
                             }, // handshake
                             1 => {
                                 let packet = UDPVpnPacket::deserialize(&(buf[..len].to_vec()));
-                                mp.values().filter(| p | p.addr == addr).for_each(|p| {
-                                    let aes = Aes256Gcm::new(&p.shared_secret.into());
-                                    let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
-                                    match aes.decrypt(&nonce, &packet.data[..]) {
-                                        Ok(decrypted) => {
-                                            let destination_ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
-                                            info!("Destination ip: {}", destination_ip);
-                                            if let Some(peer) = mp.get(&destination_ip) {
-                                                let aes = Aes256Gcm::new(&peer.shared_secret.into());
-                                                let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-                                
-                                                if let Ok(ciphered_data) = aes.encrypt(&nonce, &buf[..]) {
-                                                    let packet  = UDPVpnPacket {
-                                                        nonce: nonce.to_vec(),
-                                                        data: ciphered_data
-                                                    };
-                                                    let _ = send2hnd_ssr.send((packet.serialize(), peer.addr));
+                                if mp.values().any(|p| p.addr == addr) {
+                                    mp.values().filter(| p | p.addr == addr).for_each(|p| {
+                                        let aes = Aes256Gcm::new(&p.shared_secret.into());
+                                        let nonce = Nonce::clone_from_slice(&packet.nonce[..]);
+                                        match aes.decrypt(&nonce, &packet.data[..]) {
+                                            Ok(decrypted) => {
+                                                let destination_ip = IpAddr::V4(Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]));
+                                                info!("Destination ip: {}", destination_ip);
+                                                if let Some(peer) = mp.get(&destination_ip) {
+                                                    let aes = Aes256Gcm::new(&peer.shared_secret.into());
+                                                    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+                                    
+                                                    if let Ok(ciphered_data) = aes.encrypt(&nonce, &buf[..]) {
+                                                        let packet  = UDPVpnPacket {
+                                                            nonce: nonce.to_vec(),
+                                                            data: ciphered_data
+                                                        };
+                                                        let _ = send2hnd_ssr.send((packet.serialize(), peer.addr));
+                                                    }
+                                                } else {
+                                                    let _ = send2tun.send(decrypted);
                                                 }
-                                            } else {
-                                                let _ = send2tun.send(decrypted);
-                                            }
-                                            //info!("Start of packet: {:#?} from {}", decrypted[..12].to_vec(), addr);
-                                        },
-                                        Err(error) => error!("Decryption error! {:?}", error)
-                                    }
-                                });
+                                                //info!("Start of packet: {:#?} from {}", decrypted[..12].to_vec(), addr);
+                                            },
+                                            Err(error) => error!("Decryption error! {:?}", error)
+                                        }
+                                    });
+                                } else {
+                                    let ips = mp.values().map(|p| p.addr.ip()).collect::<Vec<IpAddr>>();
+                                    info!("Tough luck finding ip {} in clients list {:?}", addr, ips);
+                                }
                             }, // payload
                             2 => { }, // got keepalive packet
                             _ => error!("Unexpected header value.")
